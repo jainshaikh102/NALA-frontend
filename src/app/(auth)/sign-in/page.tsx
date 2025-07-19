@@ -174,6 +174,16 @@ export default function SignInPage() {
                 )}
               </div>
 
+              {/* Forgot Password Link */}
+              <div className="text-right">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:text-primary/80 font-medium"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+
               {/* Sign In Button */}
               <Button
                 type="submit"
@@ -206,8 +216,8 @@ export default function SignInPage() {
                   <Image
                     src="/svgs/Facebook-Icon.svg"
                     alt="Facebook"
-                    width={20}
-                    height={20}
+                    width={10}
+                    height={10}
                   />
                 </Button>
                 <Button
@@ -254,7 +264,7 @@ export default function SignInPage() {
               {/* Sign Up Link */}
               <div className="text-center">
                 <span className="text-sm text-muted-foreground">
-                  Don't Have An Account?{" "}
+                  Don&apos;t Have An Account?{" "}
                 </span>
                 <Link
                   href="/sign-up"

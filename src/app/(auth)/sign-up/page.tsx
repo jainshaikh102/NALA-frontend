@@ -287,8 +287,8 @@ export default function SignUpPage() {
                   <Image
                     src="/svgs/Facebook-Icon.svg"
                     alt="Facebook"
-                    width={20}
-                    height={20}
+                    width={10}
+                    height={10}
                   />
                 </Button>
                 <Button
