@@ -61,7 +61,7 @@
   --radius: 0.625rem;
   --background: #1a2332;
   --container: rgba(34, 44, 65, 0.13);
-  --foreground: #e2e8f0;
+  --foreground: #ffffff;
   --card: #2a3441;
   --card-foreground: #e2e8f0;
   --popover: #2a3441;
@@ -95,7 +95,7 @@
 
 .dark {
   --background: #1a2332;
-  --foreground: #e2e8f0;
+  --foreground: #ffffff;
   --card: #2a3441;
   --card-foreground: #e2e8f0;
   --popover: #2a3441;
