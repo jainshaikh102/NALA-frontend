@@ -51,10 +51,46 @@ const ChatPage = () => {
 
   // Mock chat models
   const chatModels = [
-    { id: 1, name: "Deep Seek", active: true, color: "bg-red-500" },
-    { id: 2, name: "Chat GPT", active: false, color: "bg-green-500" },
-    { id: 3, name: "LLAMA", active: false, color: "bg-blue-500" },
-    { id: 4, name: "More", active: false, color: "bg-gray-500" },
+    {
+      id: 1,
+      name: "Deep Seek",
+      active: true,
+      color: "bg-red-500",
+      icon: "/svgs/DeepSeek-Icon.svg",
+      bgColor: "bg-white",
+    },
+    {
+      id: 2,
+      name: "Chat GPT",
+      active: false,
+      color: "bg-green-500",
+      icon: "/svgs/ChatGPT-Icon.svg",
+      bgColor: "bg-black",
+    },
+    {
+      id: 3,
+      name: "LLAMA",
+      active: false,
+      color: "bg-blue-500",
+      icon: "/svgs/LLAMA-Icon.svg",
+      bgColor: "bg-white",
+    },
+    {
+      id: 4,
+      name: "GEMINI",
+      active: false,
+      color: "bg-gray-500",
+      icon: "/svgs/GEMINI-Icon.svg",
+      bgColor: "bg-white",
+    },
+    {
+      id: 5,
+      name: "MIXTRAL",
+      active: false,
+      color: "bg-gray-500",
+      icon: "/svgs/MIXTRAL-Icon.svg",
+      bgColor: "bg-white",
+    },
   ];
 
   // Mock chat messages
@@ -196,16 +232,6 @@ const ChatPage = () => {
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              {!leftPanelOpen && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setLeftPanelOpen(true)}
-                  className="h-8 w-8"
-                >
-                  <PanelRight className="h-4 w-4" />
-                </Button>
-              )}
               <h1 className="text-xl font-semibold text-foreground">Chat</h1>
             </div>
 
@@ -218,17 +244,6 @@ const ChatPage = () => {
                   height={24}
                 />
               </div>
-
-              {!rightPanelOpen && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setRightPanelOpen(true)}
-                  className="h-8 w-8"
-                >
-                  <PanelRight className="h-4 w-4" />
-                </Button>
-              )}
             </div>
           </div>
 
@@ -297,15 +312,24 @@ const ChatPage = () => {
               <Badge
                 key={model.id}
                 variant={model.active ? "default" : "secondary"}
-                className={`cursor-pointer transition-all ${
+                className={`cursor-pointer transition-all rounded-full px-4 py-2 flex items-center justify-center gap-2 ${
                   model.active
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
               >
-                <div
-                  className={`w-2 h-2 rounded-full ${model.color} mr-2`}
-                ></div>
+                <Button
+                  variant={"outline"}
+                  size={"icon"}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center border-none hover:${model.bgColor} ${model.bgColor}`}
+                >
+                  <Image
+                    src={model.icon}
+                    alt={model.name}
+                    width={20}
+                    height={20}
+                  />
+                </Button>
                 {model.name}
               </Badge>
             ))}
