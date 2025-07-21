@@ -6,11 +6,10 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useForgotPassword } from "@/hooks/use-auth";
 
 // Zod validation schema
 const forgotPasswordSchema = z.object({
@@ -23,8 +22,7 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const forgotPasswordMutation = useForgotPassword();
 
   const {
     register,
@@ -34,42 +32,8 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  const onSubmit = async (data: ForgotPasswordFormData) => {
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send reset email");
-      }
-
-      const result = await response.json();
-
-      // Success
-      toast.success("Reset email sent! Check your inbox for the OTP.");
-
-      // Redirect to verify email page with email parameter
-      router.push(
-        `/verify-email?email=${encodeURIComponent(data.email)}&type=reset`
-      );
-    } catch (error) {
-      // Error handling
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error(errorMessage);
-      console.error("Forgot password error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: ForgotPasswordFormData) => {
+    forgotPasswordMutation.mutate(data);
   };
 
   return (
@@ -135,10 +99,12 @@ export default function ForgotPasswordPage() {
               {/* Send OTP Button */}
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={forgotPasswordMutation.isPending}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
               >
-                {isLoading ? "Sending OTP..." : "Send OTP"}
+                {forgotPasswordMutation.isPending
+                  ? "Sending OTP..."
+                  : "Send OTP"}
               </Button>
 
               {/* Back to Sign In Link */}
