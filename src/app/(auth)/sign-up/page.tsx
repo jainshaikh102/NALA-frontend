@@ -119,7 +119,8 @@ export default function SignUpPage() {
                   Welcome
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Don't have an account with us? Signup to your NALA account
+                  Don&apos;t have an account with us? Signup to your NALA
+                  account
                   <br />
                   with your email
                 </p>

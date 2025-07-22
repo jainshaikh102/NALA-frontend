@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ResponseRenderer } from "@/components/chat/ResponseRenderer";
 import {
-  ChevronLeft,
-  ChevronRight,
   Plus,
   MoreHorizontal,
   Send,
@@ -21,11 +20,29 @@ import {
   Zap,
   Globe,
   PanelRight,
+  Loader2,
 } from "lucide-react";
+
+interface ChatMessage {
+  id: number;
+  type: "user" | "bot";
+  content: string;
+  timestamp: string;
+  displayData?: unknown;
+  dataType?: string;
+  queryStr?: string;
+  status?: boolean;
+}
 
 const ChatPage = () => {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [selectedModel, setSelectedModel] = useState(
+    "deepseek-r1-distill-llama-70b"
+  );
 
   // Mock data for sources
   const sources = [
@@ -49,12 +66,13 @@ const ChatPage = () => {
     },
   ];
 
-  // Mock chat models
+  // Chat models with API model names
   const chatModels = [
     {
       id: 1,
       name: "Deep Seek",
-      active: true,
+      apiName: "deepseek-r1-distill-llama-70b",
+      active: selectedModel === "deepseek-r1-distill-llama-70b",
       color: "bg-red-500",
       icon: "/svgs/DeepSeek-Icon.svg",
       bgColor: "bg-white",
@@ -62,7 +80,8 @@ const ChatPage = () => {
     {
       id: 2,
       name: "Chat GPT",
-      active: false,
+      apiName: "gpt-4.1",
+      active: selectedModel === "gpt-4.1",
       color: "bg-green-500",
       icon: "/svgs/ChatGPT-Icon.svg",
       bgColor: "bg-black",
@@ -70,7 +89,8 @@ const ChatPage = () => {
     {
       id: 3,
       name: "LLAMA",
-      active: false,
+      apiName: "llama-3.1-8b-instant",
+      active: selectedModel === "llama-3.1-8b-instant",
       color: "bg-blue-500",
       icon: "/svgs/LLAMA-Icon.svg",
       bgColor: "bg-white",
@@ -78,7 +98,8 @@ const ChatPage = () => {
     {
       id: 4,
       name: "GEMINI",
-      active: false,
+      apiName: "gemini-2.0-flash-001",
+      active: selectedModel === "gemini-2.0-flash-001",
       color: "bg-gray-500",
       icon: "/svgs/GEMINI-Icon.svg",
       bgColor: "bg-white",
@@ -86,35 +107,104 @@ const ChatPage = () => {
     {
       id: 5,
       name: "MIXTRAL",
-      active: false,
+      apiName: "mixtral-8x7b-32768",
+      active: selectedModel === "mixtral-8x7b-32768",
       color: "bg-gray-500",
       icon: "/svgs/MIXTRAL-Icon.svg",
       bgColor: "bg-white",
     },
   ];
 
-  // Mock chat messages
-  const messages = [
-    {
-      id: 1,
-      type: "bot",
-      content: "Hey there! How can I help you today?",
-      timestamp: "10:30 AM",
-    },
-    {
-      id: 2,
-      type: "user",
-      content: "what information we can get from this website",
-      timestamp: "10:31 AM",
-    },
-    {
-      id: 3,
-      type: "bot",
-      content:
-        "Blacklionapp.xyz appears to be the website for Black Lion Innovation Group, a music company focused on discovering and promoting new talent. They seem to offer a platform for artists to showcase their work and connect with a wider audience.",
-      timestamp: "10:32 AM",
-    },
-  ];
+  // API Integration
+  const sendMessage = async (question: string) => {
+    if (!question.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      type: "user" as const,
+      content: question,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText("");
+    setIsLoading(true);
+
+    try {
+      const payload = {
+        question: question,
+        username: "jainshaikh",
+        model_name: selectedModel,
+      };
+
+      console.log("Sending payload:", payload);
+
+      const response = await fetch("/api/chat/execute-query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", response.headers);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status}, message: ${errorText}`
+        );
+      }
+
+      const data = await response.json();
+      console.log("Response data:", data);
+
+      const botMessage = {
+        id: Date.now() + 1,
+        type: "bot" as const,
+        content: data.answer_str || "Sorry, I couldn't process your request.",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        displayData: data.display_data,
+        dataType: data.data_type || "text",
+        queryStr: data.query_str,
+        status: data.status_bool,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: "bot" as const,
+        content:
+          "Sorry, there was an error processing your request. Please try again.",
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(inputText);
+  };
+
+  const handleModelSelect = (apiName: string) => {
+    setSelectedModel(apiName);
+  };
 
   // Right panel tools
   const rightPanelTools = [
@@ -234,32 +324,6 @@ const ChatPage = () => {
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-semibold text-foreground">Chat</h1>
             </div>
-
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
-                <Image
-                  src="/svgs/Bot-Lion.svg"
-                  alt="Bot Lion"
-                  width={24}
-                  height={24}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 mt-4">
-            <Badge
-              variant="secondary"
-              className="bg-secondary text-secondary-foreground"
-            >
-              Auto Pilot
-            </Badge>
-            <Badge
-              variant="secondary"
-              className="bg-secondary text-secondary-foreground"
-            >
-              Console
-            </Badge>
           </div>
         </div>
 
@@ -272,15 +336,18 @@ const ChatPage = () => {
                 message.type === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              <div
-                className={`max-w-[70%] ${
-                  message.type === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground"
-                } rounded-lg p-4`}
-              >
-                {message.type === "bot" && (
-                  <div className="flex items-center space-x-2 mb-2">
+              {message.type === "user" ? (
+                <div className="max-w-[70%] bg-primary text-primary-foreground rounded-lg p-4">
+                  <p className="text-sm">{message.content}</p>
+                  <div className="flex justify-end mt-2">
+                    <span className="text-xs text-primary-foreground/70">
+                      {message.timestamp}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-3">
                     <Image
                       src="/svgs/Golden-Paw.svg"
                       alt="Paw"
@@ -291,16 +358,13 @@ const ChatPage = () => {
                       {message.timestamp}
                     </span>
                   </div>
-                )}
-                <p className="text-sm">{message.content}</p>
-                {message.type === "user" && (
-                  <div className="flex justify-end mt-2">
-                    <span className="text-xs text-primary-foreground/70">
-                      {message.timestamp}
-                    </span>
-                  </div>
-                )}
-              </div>
+                  <ResponseRenderer
+                    answerStr={message.content}
+                    displayData={message.displayData}
+                    dataType={message.dataType || "text"}
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -317,6 +381,7 @@ const ChatPage = () => {
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
+                onClick={() => handleModelSelect(model.apiName)}
               >
                 <Button
                   variant={"outline"}
@@ -337,22 +402,38 @@ const ChatPage = () => {
 
           {/* Chat Input */}
           <div className="relative">
-            <div className="flex items-center space-x-2 bg-secondary rounded-lg p-3">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <input
-                type="text"
-                placeholder="Ask or search anything..."
-                className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
-              />
-              <Button
-                size="icon"
-                className="h-8 w-8 bg-primary hover:bg-primary/90"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="flex items-center space-x-2 bg-secondary rounded-lg p-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  type="button"
+                >
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                <input
+                  type="text"
+                  placeholder="Ask or search anything..."
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  disabled={isLoading}
+                  className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={isLoading || !inputText.trim()}
+                  className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       </div>

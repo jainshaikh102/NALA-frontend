@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Loader2 } from "lucide-react";
 
-export default function PaymentConfirmationPage() {
+function PaymentConfirmationContent() {
   const [isConfirming, setIsConfirming] = useState(true);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const [countdown, setCountdown] = useState(5);
@@ -146,18 +146,23 @@ export default function PaymentConfirmationPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-foreground mb-2">
-                    {isFree ? "Welcome to NALA!" : "Thank You for Your Payment!"}
+                    {isFree
+                      ? "Welcome to NALA!"
+                      : "Thank You for Your Payment!"}
                   </h3>
                   <p className="text-muted-foreground">
                     Your {getPlanName(plan)} plan is now active.
-                    {!isFree && ` Payment of $${amount} has been processed successfully.`}
+                    {!isFree &&
+                      ` Payment of $${amount} has been processed successfully.`}
                   </p>
                 </div>
-                
+
                 <div className="bg-muted/50 rounded-lg p-4">
                   <p className="text-sm text-muted-foreground">
                     Redirecting to dashboard in{" "}
-                    <span className="font-semibold text-primary">{countdown}</span>{" "}
+                    <span className="font-semibold text-primary">
+                      {countdown}
+                    </span>{" "}
                     seconds...
                   </p>
                 </div>
@@ -182,7 +187,8 @@ export default function PaymentConfirmationPage() {
                     Payment Failed
                   </h3>
                   <p className="text-muted-foreground">
-                    We couldn't process your payment. Please try again or contact support.
+                    We couldn't process your payment. Please try again or
+                    contact support.
                   </p>
                 </div>
 
@@ -207,5 +213,13 @@ export default function PaymentConfirmationPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function PaymentConfirmationPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <PaymentConfirmationContent />
+    </Suspense>
   );
 }

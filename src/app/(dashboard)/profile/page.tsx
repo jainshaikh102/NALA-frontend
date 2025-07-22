@@ -20,7 +20,7 @@ import {
 import { Check, X, Send, Download } from "lucide-react";
 import { useState } from "react";
 
-const page = () => {
+const ProfilePage = () => {
   const [showFeatures, setShowFeatures] = useState(false);
 
   const subscriptionInvoices = [
@@ -312,4 +312,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default ProfilePage;
