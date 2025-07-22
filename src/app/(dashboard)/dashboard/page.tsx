@@ -1,8 +1,11 @@
+"use client";
+
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageCircleMore, MoreHorizontal } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function DashboardPage() {
   const chats = [
@@ -11,6 +14,7 @@ export default function DashboardPage() {
     { id: 3, title: "Daily Chat", date: "04 Jan 2025" },
     { id: 4, title: "Daily Chat", date: "01 Jan 2025" },
   ];
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-[#222C41] text-white p-8">
@@ -40,6 +44,7 @@ export default function DashboardPage() {
               <Button
                 variant={"default"}
                 className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-full w-60"
+                onClick={() => router.push("/chat")}
               >
                 START NEW CHAT
               </Button>
