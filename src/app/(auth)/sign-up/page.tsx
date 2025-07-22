@@ -6,15 +6,15 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useRegister } from "@/hooks/use-auth";
 
 // Zod validation schema
 const signUpSchema = z
   .object({
-    fullName: z
+    full_name: z
       .string()
       .min(1, "Full name is required")
       .min(2, "Full name must be at least 2 characters"),
@@ -38,7 +38,7 @@ type SignUpFormData = z.infer<typeof signUpSchema>;
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const registerMutation = useRegister();
 
   const {
     register,
@@ -48,49 +48,20 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
   });
 
-  const onSubmit = async (data: SignUpFormData) => {
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName: data.fullName,
-          email: data.email,
-          password: data.password,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Sign up failed");
-      }
-
-      const result = await response.json();
-
-      // Success
-      toast.success("Account created successfully! Welcome to Nala.");
-
-      // TODO: Handle successful sign up (redirect, auto sign-in, etc.)
-      console.log("Sign up successful:", result);
-    } catch (error) {
-      // Error handling
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error(errorMessage);
-      console.error("Sign up error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: SignUpFormData) => {
+    const registerData = {
+      email: data.email,
+      password: data.password,
+      confirm_password: data.confirmPassword,
+      full_name: data.full_name,
+    };
+    console.log("Register data:", registerData);
+    registerMutation.mutate(registerData);
   };
 
   const handleSocialLogin = (provider: string) => {
-    toast.info(`${provider} login coming soon!`);
     // TODO: Implement social login
+    console.log(`${provider} login coming soon!`);
   };
 
   return (
@@ -137,19 +108,19 @@ export default function SignUpPage() {
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    {...register("fullName")}
+                    {...register("full_name")}
                     type="text"
                     placeholder="John Doe"
                     className={`pl-10 bg-input border-border ${
-                      errors.fullName
+                      errors.full_name
                         ? "border-destructive focus-visible:ring-destructive"
                         : ""
                     }`}
                   />
                 </div>
-                {errors.fullName && (
+                {errors.full_name && (
                   <p className="text-sm text-destructive">
-                    {errors.fullName.message}
+                    {errors.full_name.message}
                   </p>
                 )}
               </div>
@@ -259,10 +230,10 @@ export default function SignUpPage() {
               {/* Sign Up Button */}
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={registerMutation.isPending}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
               >
-                {isLoading ? "Creating Account..." : "Sign Up"}
+                {registerMutation.isPending ? "Creating Account..." : "Sign Up"}
               </Button>
 
               {/* Divider */}

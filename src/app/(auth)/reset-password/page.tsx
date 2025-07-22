@@ -2,32 +2,29 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, Eye, EyeOff } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useResetPassword } from "@/hooks/use-auth";
+import { toast } from "sonner";
 
 // Zod validation schema
 const resetPasswordSchema = z
   .object({
-    password: z
+    new_password: z
       .string()
-      .min(1, "Password is required")
-      .min(6, "Password must be at least 6 characters")
-      .regex(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number"
-      ),
-    confirmPassword: z.string().min(1, "Please confirm your password"),
+      .min(1, "New password is required")
+      .min(6, "Password must be at least 6 characters"),
+    confirm_new_password: z.string().min(1, "Please confirm your new password"),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => data.new_password === data.confirm_new_password, {
     message: "Passwords don't match",
-    path: ["confirmPassword"],
+    path: ["confirm_new_password"],
   });
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
@@ -35,11 +32,9 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 function ResetPasswordContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [resetToken, setResetToken] = useState<string>("");
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const token = searchParams.get("token") || "";
+  const resetPasswordMutation = useResetPassword();
 
   const {
     register,
@@ -49,46 +44,41 @@ function ResetPasswordContent() {
     resolver: zodResolver(resetPasswordSchema),
   });
 
-  const onSubmit = async (data: ResetPasswordFormData) => {
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token,
-          password: data.password,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to reset password");
-      }
-
-      const result = await response.json();
-
-      // Success
-      toast.success(
-        "Password reset successfully! You can now sign in with your new password."
-      );
-
-      // Redirect to sign in page
-      router.push("/sign-in?reset=success");
-    } catch (error) {
-      // Error handling
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error(errorMessage);
-      console.error("Reset password error:", error);
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    // Get reset token from session storage
+    const token = sessionStorage.getItem("reset_token");
+    if (!token) {
+      toast.error("Invalid reset session. Please start over.");
+      router.push("/forgot-password");
+      return;
     }
+    setResetToken(token);
+  }, [router]);
+
+  const onSubmit = (data: ResetPasswordFormData) => {
+    if (!resetToken) {
+      toast.error("Invalid reset session. Please start over.");
+      router.push("/forgot-password");
+      return;
+    }
+
+    resetPasswordMutation.mutate({
+      reset_token: resetToken,
+      new_password: data.new_password,
+      confirm_new_password: data.confirm_new_password,
+    });
   };
+
+  if (!resetToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -133,11 +123,11 @@ function ResetPasswordContent() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    {...register("password")}
+                    {...register("new_password")}
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter new password"
                     className={`pl-10 pr-10 bg-input border-border ${
-                      errors.password
+                      errors.new_password
                         ? "border-destructive focus-visible:ring-destructive"
                         : ""
                     }`}
@@ -154,9 +144,9 @@ function ResetPasswordContent() {
                     )}
                   </button>
                 </div>
-                {errors.password && (
+                {errors.new_password && (
                   <p className="text-sm text-destructive">
-                    {errors.password.message}
+                    {errors.new_password.message}
                   </p>
                 )}
               </div>
@@ -169,11 +159,11 @@ function ResetPasswordContent() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    {...register("confirmPassword")}
+                    {...register("confirm_new_password")}
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm new password"
                     className={`pl-10 pr-10 bg-input border-border ${
-                      errors.confirmPassword
+                      errors.confirm_new_password
                         ? "border-destructive focus-visible:ring-destructive"
                         : ""
                     }`}
@@ -190,9 +180,9 @@ function ResetPasswordContent() {
                     )}
                   </button>
                 </div>
-                {errors.confirmPassword && (
+                {errors.confirm_new_password && (
                   <p className="text-sm text-destructive">
-                    {errors.confirmPassword.message}
+                    {errors.confirm_new_password.message}
                   </p>
                 )}
               </div>
@@ -213,10 +203,12 @@ function ResetPasswordContent() {
               {/* Reset Password Button */}
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={resetPasswordMutation.isPending}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
               >
-                {isLoading ? "Resetting Password..." : "Reset Password"}
+                {resetPasswordMutation.isPending
+                  ? "Resetting Password..."
+                  : "Reset Password"}
               </Button>
 
               {/* Back to Sign In Link */}

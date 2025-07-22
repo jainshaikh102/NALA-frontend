@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useVerifyOTP, useForgotPassword } from "@/hooks/use-auth";
+import { Shield } from "lucide-react";
 
 // Zod validation schema
 const verifyEmailSchema = z.object({
@@ -23,8 +25,6 @@ const verifyEmailSchema = z.object({
 type VerifyEmailFormData = z.infer<typeof verifyEmailSchema>;
 
 function VerifyEmailContent() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
@@ -33,7 +33,10 @@ function VerifyEmailContent() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const email = searchParams.get("email") || "";
-  const type = searchParams.get("type") || "signup"; // 'signup' or 'reset'
+
+  // Use the proper hooks
+  const verifyOTPMutation = useVerifyOTP();
+  const forgotPasswordMutation = useForgotPassword();
 
   const {
     handleSubmit,
@@ -93,78 +96,19 @@ function VerifyEmailContent() {
     inputRefs.current[nextIndex]?.focus();
   };
 
-  const onSubmit = async (data: VerifyEmailFormData) => {
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch("/api/auth/verify-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          otp: data.otp,
-          type,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Invalid OTP");
-      }
-
-      const result = await response.json();
-
-      // Success
-      toast.success("Email verified successfully!");
-
-      // Redirect based on type
-      if (type === "reset") {
-        router.push(`/reset-password?token=${result.token}`);
-      } else {
-        router.push("/sign-in?verified=true");
-      }
-    } catch (error) {
-      // Error handling
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error(errorMessage);
-      console.error("Verify email error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = (data: VerifyEmailFormData) => {
+    // Use the hook to verify OTP
+    verifyOTPMutation.mutate({
+      email,
+      otp: data.otp,
+    });
   };
 
-  const handleResendOtp = async () => {
-    setIsResending(true);
-
-    try {
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch("/api/auth/resend-otp", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, type }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to resend OTP");
-      }
-
-      toast.success("OTP sent successfully!");
-      setCountdown(60);
-      setCanResend(false);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An unexpected error occurred";
-      toast.error(errorMessage);
-    } finally {
-      setIsResending(false);
-    }
+  const handleResendOtp = () => {
+    // Use the forgot password hook to resend OTP
+    forgotPasswordMutation.mutate({ email });
+    setCountdown(60);
+    setCanResend(false);
   };
 
   return (
@@ -239,10 +183,12 @@ function VerifyEmailContent() {
               {/* Verify Button */}
               <Button
                 type="submit"
-                disabled={isLoading || otp.join("").length !== 6}
+                disabled={
+                  verifyOTPMutation.isPending || otp.join("").length !== 6
+                }
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
               >
-                {isLoading ? "Verifying..." : "Verify Email"}
+                {verifyOTPMutation.isPending ? "Verifying..." : "Verify Email"}
               </Button>
 
               {/* Resend OTP */}
@@ -255,10 +201,12 @@ function VerifyEmailContent() {
                     type="button"
                     variant="ghost"
                     onClick={handleResendOtp}
-                    disabled={isResending}
+                    disabled={forgotPasswordMutation.isPending}
                     className="text-primary hover:text-primary/80"
                   >
-                    {isResending ? "Sending..." : "Resend OTP"}
+                    {forgotPasswordMutation.isPending
+                      ? "Sending..."
+                      : "Resend OTP"}
                   </Button>
                 ) : (
                   <p className="text-sm text-muted-foreground">
@@ -270,10 +218,10 @@ function VerifyEmailContent() {
               {/* Back Link */}
               <div className="text-center">
                 <Link
-                  href={type === "reset" ? "/forgot-password" : "/sign-up"}
+                  href="/forgot-password"
                   className="text-sm text-primary hover:text-primary/80 font-medium"
                 >
-                  Back to {type === "reset" ? "Forgot Password" : "Sign Up"}
+                  Back to Forgot Password
                 </Link>
               </div>
             </form>
