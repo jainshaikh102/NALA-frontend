@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
+import { formatLargeNumber, addCommas } from "@/helpers/numberUtils";
 
 // Interface definitions
 interface DataFrameData {
@@ -103,11 +104,8 @@ export const DataFrameDisplay: React.FC<{ data: DataFrameData }> = ({
   data,
 }) => {
   const formatNumber = (value: any) => {
-    if (typeof value === "number" && value > 1000000) {
-      return (value / 1000000).toFixed(2) + "M";
-    }
-    if (typeof value === "number" && value > 1000) {
-      return (value / 1000).toFixed(1) + "K";
+    if (typeof value === "number") {
+      return formatLargeNumber(value);
     }
     return value;
   };
