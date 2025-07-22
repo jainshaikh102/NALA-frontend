@@ -88,7 +88,7 @@ export function useLogin() {
   const { setAuth, setLoading } = useAuthStore();
   const router = useRouter();
 
-  return usePost<LoginResponse, LoginRequest>("auth/login", {
+  return usePost<LoginResponse, LoginRequest>("/login", {
     onMutate: () => {
       console.log("Login mutation started");
       setLoading(true);
@@ -123,7 +123,7 @@ export function useLogin() {
 export function useRegister() {
   const router = useRouter();
 
-  return usePost<RegisterResponse, RegisterRequest>("auth/signup", {
+  return usePost<RegisterResponse, RegisterRequest>("/signup", {
     onSuccess: (response) => {
       toast.success(
         response.data.message ||
@@ -141,7 +141,7 @@ export function useForgotPassword() {
   const router = useRouter();
 
   return usePost<ForgotPasswordResponse, ForgotPasswordRequest>(
-    "/auth/forgot-password",
+    "/forgot-password",
     {
       onSuccess: (response) => {
         toast.success(response.data.message || "OTP sent to your email!");
@@ -160,7 +160,7 @@ export function useForgotPassword() {
 export function useVerifyOTP() {
   const router = useRouter();
 
-  return usePost<VerifyOTPResponse, VerifyOTPRequest>("/auth/verify-otp", {
+  return usePost<VerifyOTPResponse, VerifyOTPRequest>("/verify-otp", {
     onSuccess: (response) => {
       console.log("response", response);
       toast.success(response.data.message || "OTP verified successfully!");
@@ -179,7 +179,7 @@ export function useResetPassword() {
   const router = useRouter();
 
   return usePost<ResetPasswordResponse, ResetPasswordRequest>(
-    "/auth/reset-password",
+    "/reset-password",
     {
       onSuccess: (response) => {
         toast.success(response.data.message || "Password reset successfully!");
@@ -198,20 +198,17 @@ export function useVerifyEmail() {
   const { setUser } = useAuthStore();
   const router = useRouter();
 
-  return usePost<VerifyEmailResponse, VerifyEmailRequest>(
-    "/auth/verify-email",
-    {
-      onSuccess: (response) => {
-        const { user, message } = response.data;
-        setUser(user);
-        toast.success(message || "Email verified successfully!");
-        router.push("/dashboard");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Email verification failed");
-      },
-    }
-  );
+  return usePost<VerifyEmailResponse, VerifyEmailRequest>("/verify-email", {
+    onSuccess: (response) => {
+      const { user, message } = response.data;
+      setUser(user);
+      toast.success(message || "Email verified successfully!");
+      router.push("/dashboard");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Email verification failed");
+    },
+  });
 }
 
 export function useLogout() {

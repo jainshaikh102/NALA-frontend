@@ -2,10 +2,10 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import Cookies from "js-cookie";
 import { useAuthStore } from "@/store/auth-store";
 
-// Base URL - Use proxy in production to avoid mixed content issues
+// Base URL - Use direct API routes in production to avoid mixed content issues
 export const API_BASE_URL =
   process.env.NODE_ENV === "production"
-    ? "/api/proxy" // Use proxy in production
+    ? "/api" // Use direct API routes in production
     : process.env.NEXT_PUBLIC_API_BASE_URL || "http://35.209.131.186:8002"; // Direct API in development
 
 // Axios instance
@@ -42,7 +42,7 @@ apiClient.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          const res = await axios.post(`${API_BASE_URL}/refresh`, {
             refresh_token: refreshToken,
           });
 
