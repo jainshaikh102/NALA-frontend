@@ -371,16 +371,30 @@ const ChatPage = () => {
   ];
 
   return (
-    <div className="h-screen bg-secondary flex gap-4 p-4">
+    <div className="h-screen bg-secondary flex flex-col lg:flex-row gap-2 lg:gap-4 p-2 lg:p-4 overflow-hidden">
       {/* Left Panel - Sources, Rosters, Queries */}
       <div
         className={`${
-          leftPanelOpen ? "w-80" : "w-16"
-        } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg overflow-auto scrollbar-hide`}
+          leftPanelOpen
+            ? "w-full lg:w-60 h-64 lg:h-auto"
+            : "hidden lg:block lg:w-16"
+        } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg overflow-auto scrollbar-hide flex-shrink-0`}
       >
         <div className="h-full flex flex-col">
           {leftPanelOpen ? (
             <>
+              {/* Mobile Close Button */}
+              <div className="lg:hidden p-2 border-b border-border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setLeftPanelOpen(false)}
+                  className="h-8 w-8 ml-auto"
+                >
+                  ×
+                </Button>
+              </div>
+
               {/* Sources Section */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
@@ -465,7 +479,7 @@ const ChatPage = () => {
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-6 w-6 rounded-full bg-secondary border-solid border-[1px] border-[#ffffff]/50"
+                        className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
                         onClick={handleOpenRosterDialog}
                       >
                         <Plus className="h-4 w-4" />
@@ -473,7 +487,17 @@ const ChatPage = () => {
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-[#3A4A5C]">
                       <DialogHeader>
-                        <div className="flex items-center justify-center mb-4">
+                        <div className="flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
+                          <Image
+                            src="/svgs/Bot-Lion.svg"
+                            alt="Paw"
+                            width={110}
+                            height={100}
+                            className="object-contain absolute -top-1 "
+                          />
+                          <Separator className="mt-15 z-50 " />
+                        </div>
+                        {/* <div className="flex items-center justify-center mb-4">
                           <Image
                             src="/svgs/Bot-Lion.svg"
                             alt="NALA Bot"
@@ -488,7 +512,7 @@ const ChatPage = () => {
                           Your roster lets NALA personalize insights and
                           strategies based on the artists and talent that matter
                           most to your music business.
-                        </p>
+                        </p> */}
                       </DialogHeader>
 
                       <div className="space-y-4">
@@ -671,11 +695,30 @@ const ChatPage = () => {
       </div>
 
       {/* Center Panel - Chat */}
-      <div className="flex-1 flex flex-col bg-background border border-border rounded-lg">
+      <div className="flex-1 flex flex-col bg-background border border-border rounded-lg overflow-hidden min-w-0 w-full lg:w-auto">
         {/* Chat Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
+              {/* Mobile Menu Buttons */}
+              <div className="flex lg:hidden space-x-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setLeftPanelOpen(!leftPanelOpen)}
+                  className="h-8 w-8"
+                >
+                  <PanelRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setRightPanelOpen(!rightPanelOpen)}
+                  className="h-8 w-8"
+                >
+                  <PanelRight className="h-4 w-4" />
+                </Button>
+              </div>
               <h1 className="text-xl font-semibold text-foreground">Chat</h1>
             </div>
           </div>
@@ -700,7 +743,7 @@ const ChatPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4">
+                <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4 max-w-full">
                   <div className="flex items-center space-x-2 mb-3">
                     <Image
                       src="/svgs/Golden-Paw.svg"
@@ -712,11 +755,13 @@ const ChatPage = () => {
                       {message.timestamp}
                     </span>
                   </div>
-                  <ResponseRenderer
-                    answerStr={message.content}
-                    displayData={message.displayData}
-                    dataType={message.dataType || "text"}
-                  />
+                  <div className="w-full">
+                    <ResponseRenderer
+                      answerStr={message.content}
+                      displayData={message.displayData}
+                      dataType={message.dataType || "text"}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -727,20 +772,17 @@ const ChatPage = () => {
         <div className="p-4 border-t border-border">
           <div className="flex items-center justify-center space-x-2 mb-4">
             {chatModels.map((model) => (
-              <Badge
-                key={model.id}
-                variant={model.active ? "default" : "secondary"}
-                className={`cursor-pointer transition-all rounded-full px-4 py-2 flex items-center justify-center gap-2 ${
-                  model.active
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
-                onClick={() => handleModelSelect(model.apiName)}
-              >
+              <div key={model.id} className="relative">
+                {/* Mobile/Tablet: Icon Only */}
                 <Button
-                  variant={"outline"}
-                  size={"icon"}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center border-none hover:${model.bgColor} ${model.bgColor}`}
+                  variant={model.active ? "default" : "outline"}
+                  size="icon"
+                  className={`xl:hidden w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                    model.active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border"
+                  } ${model.bgColor}`}
+                  onClick={() => handleModelSelect(model.apiName)}
                 >
                   <Image
                     src={model.icon}
@@ -749,8 +791,32 @@ const ChatPage = () => {
                     height={20}
                   />
                 </Button>
-                {model.name}
-              </Badge>
+
+                {/* Desktop: Full Badge */}
+                <Badge
+                  variant={model.active ? "default" : "secondary"}
+                  className={`hidden xl:flex cursor-pointer transition-all rounded-full px-4 py-2 items-center justify-center gap-2 ${
+                    model.active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  }`}
+                  onClick={() => handleModelSelect(model.apiName)}
+                >
+                  <Button
+                    variant={"outline"}
+                    size={"icon"}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center border-none hover:${model.bgColor} ${model.bgColor}`}
+                  >
+                    <Image
+                      src={model.icon}
+                      alt={model.name}
+                      width={20}
+                      height={20}
+                    />
+                  </Button>
+                  {model.name}
+                </Badge>
+              </div>
             ))}
           </div>
 
@@ -795,12 +861,26 @@ const ChatPage = () => {
       {/* Right Panel - Studio/Note */}
       <div
         className={`${
-          rightPanelOpen ? "w-80" : "w-16"
-        } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg`}
+          rightPanelOpen
+            ? "w-full lg:w-60 h-64 lg:h-auto"
+            : "hidden lg:block lg:w-16"
+        } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg flex-shrink-0`}
       >
         <div className="h-full flex flex-col">
           {rightPanelOpen ? (
             <>
+              {/* Mobile Close Button */}
+              <div className="lg:hidden p-2 border-b border-border">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setRightPanelOpen(false)}
+                  className="h-8 w-8 ml-auto"
+                >
+                  ×
+                </Button>
+              </div>
+
               {/* Right Panel Header */}
               <div className="p-4 border-b border-border">
                 <div className="flex items-center justify-between mb-4">

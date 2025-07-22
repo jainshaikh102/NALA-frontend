@@ -5,7 +5,14 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import { formatLargeNumber, addCommas } from "@/helpers/numberUtils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 // Interface definitions
 interface DataFrameData {
@@ -105,52 +112,63 @@ export const DataFrameDisplay: React.FC<{ data: DataFrameData }> = ({
 }) => {
   const formatNumber = (value: any) => {
     if (typeof value === "number") {
-      return formatLargeNumber(value);
+      return value;
     }
     return value;
   };
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                {data.columns.map((column, index) => (
-                  <th
-                    key={index}
-                    className="text-left p-3 font-medium text-muted-foreground"
-                  >
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.data.map((row, rowIndex) => (
-                <tr
-                  key={rowIndex}
-                  className="border-b hover:bg-muted/30 transition-colors"
-                >
-                  {row.map((cell, cellIndex) => (
-                    <td key={cellIndex} className="p-3">
-                      {cellIndex === 0 ? (
-                        <span className="font-medium">{cell}</span>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {formatNumber(cell)}
-                        </span>
-                      )}
-                    </td>
+    <div className="w-full max-w-[90vw] lg:max-w-[55vw] overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="w-full bg-background">
+        <div className="p-0 bg-background">
+          <div className="min-w-fit bg-background">
+            <Table className="w-full bg-background">
+              <TableHeader className="bg-muted/50">
+                <TableRow className="border-b bg-muted/50">
+                  {data.columns.map((column, index) => (
+                    <TableHead
+                      key={index}
+                      className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap min-w-[100px] max-w-[150px] bg-muted/50"
+                      style={{ width: index === 0 ? "120px" : "100px" }}
+                    >
+                      <div className="truncate" title={column}>
+                        {column}
+                      </div>
+                    </TableHead>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-background">
+                {data.data.map((row, rowIndex) => (
+                  <TableRow
+                    key={rowIndex}
+                    className="border-b bg-background hover:bg-muted/30 transition-colors"
+                  >
+                    {row.map((cell, cellIndex) => (
+                      <TableCell
+                        key={cellIndex}
+                        className="p-2 whitespace-nowrap min-w-[100px] max-w-[150px] bg-background"
+                        style={{ width: cellIndex === 0 ? "120px" : "100px" }}
+                      >
+                        <div className="truncate" title={String(cell)}>
+                          {cellIndex === 0 ? (
+                            <span className="font-medium">{cell}</span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {formatNumber(cell)}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
