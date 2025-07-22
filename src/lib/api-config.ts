@@ -2,9 +2,11 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import Cookies from "js-cookie";
 import { useAuthStore } from "@/store/auth-store";
 
-// Base URL
+// Base URL - Use proxy in production to avoid mixed content issues
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://35.209.131.186:8002";
+  process.env.NODE_ENV === "production"
+    ? "/api/proxy" // Use proxy in production
+    : process.env.NEXT_PUBLIC_API_BASE_URL || "http://35.209.131.186:8002"; // Direct API in development
 
 // Axios instance
 export const apiClient: AxiosInstance = axios.create({
