@@ -274,12 +274,11 @@ const ChatPage = () => {
   const fetchAllArtists = async () => {
     setIsLoadingArtists(true);
     try {
-      const response = await fetch("http://35.209.131.186:8002/artists", {
+      const response = await fetch("/api/artists", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "cors",
       });
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -289,31 +288,9 @@ const ChatPage = () => {
       setFilteredArtists(artists);
     } catch (error) {
       console.error("Error fetching artists:", error);
-      s;
-      // If CORS error, try without mode
-      try {
-        const fallbackResponse = await fetch(
-          "http://35.209.131.186:8002/artists",
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (fallbackResponse.ok) {
-          const artists = await fallbackResponse.json();
-          setAllArtists(artists);
-          setFilteredArtists(artists);
-        } else {
-          throw new Error("Fallback request also failed");
-        }
-      } catch (fallbackError) {
-        console.error("Fallback request failed:", fallbackError);
-        // Show empty state instead of mock data
-        setAllArtists([]);
-        setFilteredArtists([]);
-      }
+      // Show empty state instead of mock data
+      setAllArtists([]);
+      setFilteredArtists([]);
     } finally {
       setIsLoadingArtists(false);
     }
