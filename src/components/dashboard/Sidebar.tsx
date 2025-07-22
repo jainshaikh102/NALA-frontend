@@ -12,6 +12,8 @@ import {
   LogOut,
   Users,
 } from "lucide-react";
+import { useLogout } from "@/hooks/use-auth";
+import { useAuthStore } from "@/store/auth-store";
 
 interface NavigationItem {
   name: string;
@@ -58,6 +60,14 @@ const navigation: NavigationItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useLogout();
+  const { user } = useAuthStore();
+
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to logout?")) {
+      logout();
+    }
+  };
 
   return (
     <aside className="w-24 bg-background min-h-screen flex flex-col">
@@ -120,12 +130,25 @@ export default function Sidebar() {
       {/* User Profile */}
       <div className="p-4 flex flex-col items-center space-y-4">
         {/* User Avatar */}
-        <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center group relative">
           <User className="w-5 h-5 text-white" />
+
+          {/* User Info Tooltip */}
+          {user && (
+            <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+              <div className="font-medium">
+                {user.full_name || user.username || "User"}
+              </div>
+              <div className="text-gray-300">{user.email}</div>
+            </div>
+          )}
         </div>
 
         {/* Logout */}
-        <button className="w-12 h-12 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 group relative">
+        <button
+          onClick={handleLogout}
+          className="w-12 h-12 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 group relative"
+        >
           <LogOut className="w-5 h-5" />
 
           {/* Tooltip */}

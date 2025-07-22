@@ -1,14 +1,17 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import Cookies from 'js-cookie';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import Cookies from "js-cookie";
 
 export interface User {
-  id: string;
+  id?: string;
   email: string;
   username: string;
+  full_name?: string;
   firstName?: string;
   lastName?: string;
+  payment_plan?: string;
   isEmailVerified?: boolean;
+  created_at?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -33,8 +36,8 @@ type AuthStore = AuthState & AuthActions;
 
 const COOKIE_OPTIONS = {
   expires: 7, // 7 days
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict" as const,
 };
 
 export const useAuthStore = create<AuthStore>()(
@@ -50,9 +53,9 @@ export const useAuthStore = create<AuthStore>()(
       // Actions
       setAuth: (user: User, accessToken: string, refreshToken?: string) => {
         // Store tokens in cookies
-        Cookies.set('accessToken', accessToken, COOKIE_OPTIONS);
+        Cookies.set("accessToken", accessToken, COOKIE_OPTIONS);
         if (refreshToken) {
-          Cookies.set('refreshToken', refreshToken, COOKIE_OPTIONS);
+          Cookies.set("refreshToken", refreshToken, COOKIE_OPTIONS);
         }
 
         set({
@@ -66,8 +69,8 @@ export const useAuthStore = create<AuthStore>()(
 
       clearAuth: () => {
         // Remove tokens from cookies
-        Cookies.remove('accessToken');
-        Cookies.remove('refreshToken');
+        Cookies.remove("accessToken");
+        Cookies.remove("refreshToken");
 
         set({
           user: null,
@@ -87,8 +90,8 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       initializeAuth: () => {
-        const accessToken = Cookies.get('accessToken');
-        const refreshToken = Cookies.get('refreshToken');
+        const accessToken = Cookies.get("accessToken");
+        const refreshToken = Cookies.get("refreshToken");
 
         if (accessToken) {
           set({
@@ -105,7 +108,7 @@ export const useAuthStore = create<AuthStore>()(
       },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       partialize: (state) => ({
         user: state.user,
         // Don't persist tokens in localStorage, only in cookies

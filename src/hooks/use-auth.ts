@@ -160,14 +160,16 @@ export function useForgotPassword() {
 export function useVerifyOTP() {
   const router = useRouter();
 
-  return usePost<VerifyOTPResponse, VerifyOTPRequest>("auth/verify-otp", {
+  return usePost<VerifyOTPResponse, VerifyOTPRequest>("/auth/verify-otp", {
     onSuccess: (response) => {
+      console.log("response", response);
       toast.success(response.data.message || "OTP verified successfully!");
       // Store reset token temporarily and redirect to reset password page
       sessionStorage.setItem("reset_token", response.data.reset_token);
       router.push("/reset-password");
     },
     onError: (error) => {
+      console.log("error", error);
       toast.error(error.message || "Invalid or expired OTP");
     },
   });
@@ -177,7 +179,7 @@ export function useResetPassword() {
   const router = useRouter();
 
   return usePost<ResetPasswordResponse, ResetPasswordRequest>(
-    "auth/reset-password",
+    "/auth/reset-password",
     {
       onSuccess: (response) => {
         toast.success(response.data.message || "Password reset successfully!");
