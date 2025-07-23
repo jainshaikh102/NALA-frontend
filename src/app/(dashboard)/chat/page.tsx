@@ -379,7 +379,7 @@ const ChatPage = () => {
       <div
         className={`${
           leftPanelOpen
-            ? "w-full lg:w-60 h-64 lg:h-auto"
+            ? "w-full lg:w-60 xl:w-72 2xl:w-96 h-64 lg:h-auto"
             : "hidden lg:block lg:w-16"
         } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg overflow-auto scrollbar-hide flex-shrink-0`}
       >
@@ -873,11 +873,11 @@ const ChatPage = () => {
                 <Button
                   variant={model.active ? "default" : "outline"}
                   size="icon"
-                  className={`xl:hidden w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  className={`2xl:hidden w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                     model.active
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border"
-                  } ${model.bgColor}`}
+                      ? "bg-primary text-primary-foreground border-primary border-2 shadow-lg scale-110"
+                      : `bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border hover:scale-105 ${model.bgColor}`
+                  }`}
                   onClick={() => handleModelSelect(model.apiName)}
                 >
                   <Image
@@ -885,29 +885,35 @@ const ChatPage = () => {
                     alt={model.name}
                     width={20}
                     height={20}
+                    className={model.active ? "brightness-0 invert" : ""}
                   />
                 </Button>
 
                 {/* Desktop: Full Badge */}
                 <Badge
                   variant={model.active ? "default" : "secondary"}
-                  className={`hidden xl:flex cursor-pointer transition-all rounded-full px-4 py-2 items-center justify-center gap-2 ${
+                  className={`hidden 2xl:flex cursor-pointer transition-all rounded-full px-4 py-2 items-center justify-center gap-2 ${
                     model.active
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      ? "bg-primary text-primary-foreground border-primary border-2 shadow-lg"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-105"
                   }`}
                   onClick={() => handleModelSelect(model.apiName)}
                 >
                   <Button
                     variant={"outline"}
                     size={"icon"}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border-none hover:${model.bgColor} ${model.bgColor}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center border-none ${
+                      model.active
+                        ? "bg-white"
+                        : `hover:${model.bgColor} ${model.bgColor}`
+                    }`}
                   >
                     <Image
                       src={model.icon}
                       alt={model.name}
                       width={20}
                       height={20}
+                      className={model.active ? "" : ""}
                     />
                   </Button>
                   {model.name}
@@ -958,7 +964,7 @@ const ChatPage = () => {
       <div
         className={`${
           rightPanelOpen
-            ? "w-full lg:w-60 h-64 lg:h-auto"
+            ? "w-full lg:w-60 xl:w-72 2xl:w-96 h-64 lg:h-auto"
             : "hidden lg:block lg:w-16"
         } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg flex-shrink-0`}
       >
