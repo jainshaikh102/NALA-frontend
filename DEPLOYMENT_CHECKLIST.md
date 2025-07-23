@@ -3,6 +3,7 @@
 ## ✅ Pre-Deployment Verification
 
 ### 1. Build & Environment
+
 - [x] Production build completes successfully (`npm run build`)
 - [x] Environment variables configured correctly
 - [x] API endpoints pointing to production backend (`https://backend.nalabot.com`)
@@ -10,6 +11,7 @@
 - [x] All dependencies properly installed and up-to-date
 
 ### 2. Core Features Tested
+
 - [x] Authentication flow (sign-in, sign-up, forgot password)
 - [x] Dashboard navigation and sidebar functionality
 - [x] Chat interface with three-panel layout
@@ -19,6 +21,7 @@
 - [x] Mobile responsiveness and panel collapsing
 
 ### 3. API Integration
+
 - [x] Chat API endpoint: `https://backend.nalabot.com/execute_query`
 - [x] Artists API endpoint: `https://backend.nalabot.com/artists`
 - [x] Authentication endpoints working
@@ -26,6 +29,7 @@
 - [x] CORS configuration verified
 
 ### 4. Production Configuration
+
 - [x] Environment files created (`.env.production`)
 - [x] Vercel configuration file (`vercel.json`) with security headers
 - [x] Next.js config optimized for production
@@ -35,11 +39,13 @@
 ## 📁 Files Ready for Deployment
 
 ### Environment Configuration
+
 - `.env.production` - Production environment variables
 - `vercel.json` - Vercel deployment configuration
 - `next.config.js` - Next.js production settings
 
 ### Core Application Files
+
 - `src/app/(dashboard)/chat/page.tsx` - Main chat interface
 - `src/components/chat/ResponseRenderer.tsx` - API response handler
 - `src/components/chat/DataDisplayComponents.tsx` - Data visualization components
@@ -48,10 +54,12 @@
 ## 🔧 Vercel Deployment Steps
 
 1. **Connect Repository**
+
    - Link GitHub repository: `https://github.com/jainshaikh102/NALA-frontend.git`
    - Set deployment branch to `master`
 
 2. **Environment Variables**
+
    ```
    NEXT_PUBLIC_API_BASE_URL=https://backend.nalabot.com
    NODE_ENV=production
@@ -59,18 +67,26 @@
    ```
 
 3. **Build Settings**
-   - Framework: Next.js
-   - Build Command: `npm run build`
-   - Output Directory: `.next`
-   - Install Command: `npm install`
+
+   - Framework: Next.js (auto-detected)
+   - Build Command: `npm run build` (auto-detected)
+   - Output Directory: `.next` (auto-detected)
+   - Install Command: `npm install` (auto-detected)
 
 4. **Domain Configuration**
    - Primary domain will be auto-assigned by Vercel
    - Custom domain can be configured later if needed
 
+## ⚠️ **FIXED: Vercel Runtime Error**
+
+- **Issue**: "Function Runtimes must have a valid version" error
+- **Solution**: Removed invalid `functions` configuration from `vercel.json`
+- **Status**: ✅ Fixed - Vercel will auto-detect Next.js runtime
+
 ## 🧪 Post-Deployment Testing
 
 ### Critical Functionality
+
 - [ ] Sign-in/Sign-up flows work correctly
 - [ ] Dashboard loads and navigation works
 - [ ] Chat interface loads with all three panels
@@ -81,6 +97,7 @@
 - [ ] Mobile responsiveness works on various devices
 
 ### Performance Checks
+
 - [ ] Page load times are acceptable
 - [ ] API response times are reasonable
 - [ ] No console errors in browser
@@ -89,11 +106,13 @@
 ## 🔍 Known Configurations
 
 ### API Endpoints
+
 - **Chat API**: `https://backend.nalabot.com/execute_query`
 - **Artists API**: `https://backend.nalabot.com/artists`
 - **Auth APIs**: `https://backend.nalabot.com/auth/*`
 
 ### Chat Models Available
+
 - DeepSeek (deepseek-r1-distill-llama-70b)
 - ChatGPT (gpt-4.1)
 - LLAMA (llama-3.1-8b-instant)
@@ -101,6 +120,7 @@
 - MIXTRAL (mixtral-8x7b-32768)
 
 ### Response Data Types Supported
+
 - text - Simple text responses
 - error - Error messages
 - dataframe - Tabular data
