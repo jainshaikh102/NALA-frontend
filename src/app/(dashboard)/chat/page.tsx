@@ -26,6 +26,7 @@ import {
   X,
   Play,
   Image as ImageIcon,
+  Info,
 } from "lucide-react";
 
 import {
@@ -988,18 +989,9 @@ const ChatPage = () => {
                     onClick={() => setRightPanelOpen(false)}
                     className="h-6 w-6 hidden lg:block"
                   >
-                    <X className="h-4 w-4" />
+                    <PanelRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                  <span className="text-sm text-muted-foreground">
-                    Deep Dive Conversation
-                  </span>
-                </div>
-                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
-                  Generate
-                </Button>
               </div>
 
               {/* Audio Section */}
@@ -1009,18 +1001,33 @@ const ChatPage = () => {
                     Audio
                   </h2>
                   <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <Info className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <Volume2 className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm text-muted-foreground">
-                    Deep Dive Conversation
-                  </span>
+                <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={"ghost"}
+                      size={"icon"}
+                      className="bg-[#FFFFFF4D] rounded-full"
+                    >
+                      {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
+                      <Image
+                        src={"/svgs/Speaker-WhiteIcon.svg"}
+                        alt="Google Drive"
+                        width={16}
+                        height={16}
+                      />
+                    </Button>
+                    <span className="text-[14px] text-muted-foreground">
+                      Deep Dive Conversation
+                    </span>
+                  </div>
+
+                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
+                    Generate
+                  </Button>
                 </div>
-                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
-                  Generate
-                </Button>
               </div>
 
               {/* Video Section */}
@@ -1030,18 +1037,33 @@ const ChatPage = () => {
                     Video
                   </h2>
                   <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <Info className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <Play className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm text-muted-foreground">
-                    AI Visionary Recap
-                  </span>
+                <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={"ghost"}
+                      size={"icon"}
+                      className="bg-[#FFFFFF4D] rounded-full"
+                    >
+                      {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
+                      <Image
+                        src={"/svgs/Video-WhiteIcon.svg"}
+                        alt="Google Drive"
+                        width={16}
+                        height={16}
+                      />
+                    </Button>
+                    <span className="text-[14px] text-muted-foreground">
+                      Deep Dive Conversation
+                    </span>
+                  </div>
+
+                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
+                    Generate
+                  </Button>
                 </div>
-                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
-                  Generate
-                </Button>
               </div>
 
               {/* Image Section */}
@@ -1051,18 +1073,33 @@ const ChatPage = () => {
                     Image
                   </h2>
                   <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <Info className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex items-center space-x-2 mb-3">
-                  <ImageIcon className="h-4 w-4 text-blue-400" />
-                  <span className="text-sm text-muted-foreground">
-                    Visual Intelligence
-                  </span>
+                <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant={"ghost"}
+                      size={"icon"}
+                      className="bg-[#FFFFFF4D] rounded-full"
+                    >
+                      {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
+                      <Image
+                        src={"/svgs/Image-WhiteIcon.svg"}
+                        alt="Google Drive"
+                        width={16}
+                        height={16}
+                      />
+                    </Button>
+                    <span className="text-[14px] text-muted-foreground">
+                      Deep Dive Conversation
+                    </span>
+                  </div>
+
+                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
+                    Generate
+                  </Button>
                 </div>
-                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
-                  Watch Now
-                </Button>
               </div>
 
               {/* Notes Section */}
@@ -1072,7 +1109,7 @@ const ChatPage = () => {
                     Notes
                   </h2>
                   <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-4 w-4" />
+                    <Info className="h-4 w-4" />
                   </Button>
                 </div>
 
