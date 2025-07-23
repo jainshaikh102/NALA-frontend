@@ -50,9 +50,17 @@ export function usePost<TData = any, TVariables = any>(
   return useMutation<{ data: TData }, ApiError, TVariables>({
     mutationFn: async (data: TVariables) => {
       try {
+        console.log("usePost - Making request to:", endpoint);
+        console.log(
+          "usePost - Full URL:",
+          `${apiClient.defaults.baseURL}/${endpoint}`
+        );
+        console.log("usePost - Request data:", data);
         const response = await apiClient.post(endpoint, data, config);
+        console.log("usePost - Response:", response);
         return { data: response.data };
       } catch (error) {
+        console.error("usePost - Error:", error);
         throw handleApiError(error);
       }
     },

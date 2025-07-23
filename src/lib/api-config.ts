@@ -2,11 +2,11 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import Cookies from "js-cookie";
 import { useAuthStore } from "@/store/auth-store";
 
-// Base URL - Use direct API routes in production to avoid mixed content issues
+// Base URL
 export const API_BASE_URL =
-  process.env.NODE_ENV === "production"
-    ? "/api" // Use direct API routes in production
-    : process.env.NEXT_PUBLIC_API_BASE_URL || "http://35.209.131.186:8002"; // Direct API in development
+  process.env.NEXT_PUBLIC_API_BASE_URL || "https://backend.nalabot.com";
+
+console.log("API_BASE_URL:", API_BASE_URL);
 
 // Axios instance
 export const apiClient: AxiosInstance = axios.create({
@@ -42,7 +42,7 @@ apiClient.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const res = await axios.post(`${API_BASE_URL}/refresh`, {
+          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: refreshToken,
           });
 

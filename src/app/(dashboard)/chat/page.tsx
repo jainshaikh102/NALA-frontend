@@ -22,6 +22,10 @@ import {
   Globe,
   PanelRight,
   Loader2,
+  Search,
+  X,
+  Play,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import {
@@ -59,6 +63,7 @@ const ChatPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoadingArtists, setIsLoadingArtists] = useState(false);
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
+  const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
 
   // Mock data for sources
   const sources = [
@@ -198,13 +203,16 @@ const ChatPage = () => {
 
       console.log("Sending payload:", payload);
 
-      const response = await fetch("/api/chat/execute-query", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        "https://backend.nalabot.com/execute_query",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       console.log("Response status:", response.status);
       console.log("Response headers:", response.headers);
@@ -274,7 +282,7 @@ const ChatPage = () => {
   const fetchAllArtists = async () => {
     setIsLoadingArtists(true);
     try {
-      const response = await fetch("/api/artists", {
+      const response = await fetch("https://backend.nalabot.com/artists", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -309,13 +317,29 @@ const ChatPage = () => {
     }
   };
 
-  // Add artist to selected list
-  const handleAddArtist = (artistName: string) => {
-    if (!selectedArtists.includes(artistName)) {
-      const updatedArtists = [...selectedArtists, artistName];
+  // Toggle artist selection in dialog
+  const handleToggleArtist = (artistName: string) => {
+    setTempSelectedArtists((prev) => {
+      if (prev.includes(artistName)) {
+        return prev.filter((artist) => artist !== artistName);
+      } else {
+        return [...prev, artistName];
+      }
+    });
+  };
+
+  // Add selected artists to the main list
+  const handleAddSelectedArtists = () => {
+    const newArtists = tempSelectedArtists.filter(
+      (artist) => !selectedArtists.includes(artist)
+    );
+    if (newArtists.length > 0) {
+      const updatedArtists = [...selectedArtists, ...newArtists];
       setSelectedArtists(updatedArtists);
       localStorage.setItem("selectedArtists", JSON.stringify(updatedArtists));
     }
+    setTempSelectedArtists([]);
+    setIsRosterDialogOpen(false);
   };
 
   // Remove artist from selected list
@@ -330,6 +354,7 @@ const ChatPage = () => {
   // Open roster dialog and fetch artists
   const handleOpenRosterDialog = () => {
     setIsRosterDialogOpen(true);
+    setTempSelectedArtists([]); // Clear temporary selections when opening dialog
     if (allArtists.length === 0) {
       fetchAllArtists();
     }
@@ -462,47 +487,26 @@ const ChatPage = () => {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden bg-[#3A4A5C]">
-                      <DialogHeader>
-                        <div className="flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
-                          <Image
-                            src="/svgs/Bot-Lion.svg"
-                            alt="Paw"
-                            width={110}
-                            height={100}
-                            className="object-contain absolute -top-1 "
-                          />
-                          <Separator className="mt-15 z-50 " />
-                        </div>
-                        {/* <div className="flex items-center justify-center mb-4">
-                          <Image
-                            src="/svgs/Bot-Lion.svg"
-                            alt="NALA Bot"
-                            width={60}
-                            height={60}
-                          />
-                        </div>
-                        <DialogTitle className="text-center text-xl font-semibold text-white">
-                          Roster
-                        </DialogTitle>
-                        <p className="text-center text-gray-300 text-sm">
-                          Your roster lets NALA personalize insights and
-                          strategies based on the artists and talent that matter
-                          most to your music business.
-                        </p> */}
-                      </DialogHeader>
+                    <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden bg-background">
+                      <div className="flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
+                        <Image
+                          src="/svgs/Bot-Lion.svg"
+                          alt="Paw"
+                          width={110}
+                          height={100}
+                          className="object-contain absolute -top-1 "
+                        />
+                        <Separator className="mt-15 z-50 " />
+                      </div>
 
-                      <div className="space-y-4">
+                      <div className="space-y-4 ">
                         {/* Search Input */}
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                            <Volume2 className="h-4 w-4 text-gray-400" />
-                          </div>
+                        <div className="relative rounded-full overflow-hidden">
                           <Input
                             placeholder="Search artists..."
                             value={searchQuery}
                             onChange={(e) => handleSearchChange(e.target.value)}
-                            className="pl-10 pr-10 bg-[#4A5A6C] border-none text-white placeholder:text-gray-400"
+                            className="pr-10 bg-background border-border text-white placeholder:text-border"
                           />
                           <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                             <Image
@@ -514,6 +518,42 @@ const ChatPage = () => {
                           </div>
                         </div>
 
+                        {/* Select All / Clear All */}
+                        {filteredArtists.length > 0 && (
+                          <div className="flex justify-between items-center py-2 border-b border-gray-600">
+                            <span className="text-sm text-gray-400">
+                              {filteredArtists.length} artist
+                              {filteredArtists.length !== 1 ? "s" : ""}{" "}
+                              available
+                            </span>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const availableArtists =
+                                    filteredArtists.filter(
+                                      (artist) =>
+                                        !selectedArtists.includes(artist)
+                                    );
+                                  setTempSelectedArtists(availableArtists);
+                                }}
+                                className="text-xs text-blue-400 hover:text-blue-300"
+                              >
+                                Select All
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setTempSelectedArtists([])}
+                                className="text-xs text-gray-400 hover:text-gray-300"
+                              >
+                                Clear
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Artists List */}
                         <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-hide">
                           {isLoadingArtists ? (
@@ -524,17 +564,69 @@ const ChatPage = () => {
                               </span>
                             </div>
                           ) : filteredArtists.length > 0 ? (
-                            filteredArtists.map((artist, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 bg-[#4A5A6C] rounded-lg hover:bg-[#5A6A7C] transition-colors cursor-pointer"
-                                onClick={() => handleAddArtist(artist)}
-                              >
-                                <div className="text-sm font-medium text-white">
-                                  {artist}
+                            filteredArtists.map((artist, index) => {
+                              const isSelected =
+                                tempSelectedArtists.includes(artist);
+                              const isAlreadyAdded =
+                                selectedArtists.includes(artist);
+
+                              return (
+                                <div
+                                  key={index}
+                                  className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
+                                    isAlreadyAdded
+                                      ? "bg-primary/20 border border-primary/30"
+                                      : isSelected
+                                      ? "bg-primary/20 border border-primary/30"
+                                      : "bg-[#4A5A6C] hover:bg-[#5A6A7C]"
+                                  }`}
+                                  onClick={() =>
+                                    !isAlreadyAdded &&
+                                    handleToggleArtist(artist)
+                                  }
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <div
+                                      className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                                        isAlreadyAdded
+                                          ? "bg-primary border-primary"
+                                          : isSelected
+                                          ? "bg-primary border-primary"
+                                          : "border-white"
+                                      }`}
+                                    >
+                                      {(isSelected || isAlreadyAdded) && (
+                                        <svg
+                                          className="w-3 h-3 text-white"
+                                          fill="currentColor"
+                                          viewBox="0 0 20 20"
+                                        >
+                                          <path
+                                            fillRule="evenodd"
+                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                            clipRule="evenodd"
+                                          />
+                                        </svg>
+                                      )}
+                                    </div>
+                                    <div
+                                      className={`text-sm font-medium ${
+                                        isAlreadyAdded
+                                          ? "text-white"
+                                          : "text-white"
+                                      }`}
+                                    >
+                                      {artist}
+                                    </div>
+                                  </div>
+                                  {isAlreadyAdded && (
+                                    <span className="text-xs text-green-400">
+                                      Added
+                                    </span>
+                                  )}
                                 </div>
-                              </div>
-                            ))
+                              );
+                            })
                           ) : (
                             <div className="flex flex-col items-center justify-center py-8 text-center">
                               <span className="text-white text-sm mb-2">
@@ -550,13 +642,39 @@ const ChatPage = () => {
                         </div>
 
                         {/* Add to Source Button */}
-                        <div className="flex justify-end pt-4">
-                          <Button
-                            className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
-                            onClick={() => setIsRosterDialogOpen(false)}
-                          >
-                            Add To Source
-                          </Button>
+                        <div className="flex justify-between items-center pt-4">
+                          <div className="text-sm text-gray-400">
+                            {tempSelectedArtists.length > 0 && (
+                              <span>
+                                {tempSelectedArtists.length} artist
+                                {tempSelectedArtists.length !== 1
+                                  ? "s"
+                                  : ""}{" "}
+                                selected
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setTempSelectedArtists([]);
+                                setIsRosterDialogOpen(false);
+                              }}
+                              className="px-6"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
+                              onClick={handleAddSelectedArtists}
+                              disabled={tempSelectedArtists.length === 0}
+                            >
+                              Add To Source{" "}
+                              {tempSelectedArtists.length > 0 &&
+                                `(${tempSelectedArtists.length})`}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </DialogContent>
@@ -845,7 +963,7 @@ const ChatPage = () => {
       >
         <div className="h-full flex flex-col">
           {rightPanelOpen ? (
-            <>
+            <div className="h-full overflow-y-auto">
               {/* Mobile Close Button */}
               <div className="lg:hidden p-2 border-b border-border">
                 <Button
@@ -858,74 +976,146 @@ const ChatPage = () => {
                 </Button>
               </div>
 
-              {/* Right Panel Header */}
+              {/* Studio Section */}
               <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Studio / Note
+                    Studio
                   </h2>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setRightPanelOpen(false)}
-                    className="h-8 w-8"
+                    className="h-6 w-6 hidden lg:block"
                   >
-                    <PanelRight className="h-4 w-4" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                  <span className="text-sm text-muted-foreground">
+                    Deep Dive Conversation
+                  </span>
+                </div>
+                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
+                  Generate
+                </Button>
               </div>
 
-              {/* Note Content */}
-              <div className="flex-1 p-4">
-                <div className="mb-4">
-                  <input
-                    type="text"
-                    placeholder="Note Title"
-                    className="w-full bg-transparent border-none outline-none text-lg font-semibold text-foreground placeholder:text-muted-foreground"
-                  />
+              {/* Audio Section */}
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Audio
+                  </h2>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
                 </div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <Volume2 className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm text-muted-foreground">
+                    Deep Dive Conversation
+                  </span>
+                </div>
+                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
+                  Generate
+                </Button>
+              </div>
 
-                {/* Toolbar */}
-                <div className="flex items-center space-x-2 mb-4 pb-2 border-b border-border">
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <span className="text-sm font-bold">B</span>
+              {/* Video Section */}
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Video
+                  </h2>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <span className="text-sm italic">I</span>
+                </div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <Play className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm text-muted-foreground">
+                    AI Visionary Recap
+                  </span>
+                </div>
+                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
+                  Generate
+                </Button>
+              </div>
+
+              {/* Image Section */}
+              <div className="p-4 border-b border-border">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Image
+                  </h2>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <span className="text-sm underline">U</span>
-                  </Button>
-                  <Separator orientation="vertical" className="h-6" />
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                </div>
+                <div className="flex items-center space-x-2 mb-3">
+                  <ImageIcon className="h-4 w-4 text-blue-400" />
+                  <span className="text-sm text-muted-foreground">
+                    Visual Intelligence
+                  </span>
+                </div>
+                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground">
+                  Watch Now
+                </Button>
+              </div>
+
+              {/* Notes Section */}
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Notes
+                  </h2>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
 
-                {/* Note Text Area */}
-                <textarea
-                  placeholder="Start writing your notes here..."
-                  className="w-full h-64 bg-transparent border-none outline-none resize-none text-foreground placeholder:text-muted-foreground"
-                />
-              </div>
+                {/* Add Note Button */}
+                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground mb-4 justify-center">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Note
+                </Button>
 
-              {/* Right Panel Tools */}
-              <div className="p-4 border-t border-border">
-                <div className="grid grid-cols-2 gap-2">
-                  {rightPanelTools.map((tool, index) => (
-                    <Button
-                      key={index}
-                      variant="ghost"
-                      size="sm"
-                      className="justify-start h-10 text-muted-foreground hover:text-foreground"
-                    >
-                      <tool.icon className="h-4 w-4 mr-2" />
-                      <span className="text-xs">{tool.label}</span>
+                {/* Notes List */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                      <span className="text-sm text-foreground">Note 1</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                  ))}
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                      <span className="text-sm text-foreground">Note 1</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+                      <span className="text-sm text-foreground">Note 1</span>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
             <div className="h-full flex flex-col items-center py-4 space-y-4">
               <Button
