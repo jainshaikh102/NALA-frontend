@@ -6,10 +6,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
-import { useLogin } from "@/hooks/use-auth";
+import { useRouter } from "next/navigation";
 
 // Zod validation schema
 const signInSchema = z.object({
@@ -27,7 +28,8 @@ type SignInFormData = z.infer<typeof signInSchema>;
 
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const loginMutation = useLogin();
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const {
     register,
@@ -35,17 +37,50 @@ export default function SignInPage() {
     formState: { errors },
   } = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
-    mode: "onChange",
   });
 
-  const onSubmit = (data: SignInFormData) => {
-    console.log("Login data:", data);
-    loginMutation.mutate(data);
+  const onSubmit = async (data: SignInFormData) => {
+    setIsLoading(true);
+
+    try {
+      // TODO: Replace with your actual API endpoint
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Sign in failed");
+      }
+
+      const result = await response.json();
+
+      // Success
+      toast.success("Sign in successful! Welcome back.");
+
+      // Redirect to payments page
+      router.push("/payments");
+
+      // TODO: Handle successful sign in (store tokens, etc.)
+      console.log("Sign in successful:", result);
+    } catch (error) {
+      // Error handling
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
+      toast.error(errorMessage);
+      console.error("Sign in error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSocialLogin = (provider: string) => {
+    toast.info(`${provider} login coming soon!`);
     // TODO: Implement social login
-    console.log(`${provider} login coming soon!`);
   };
 
   return (
@@ -157,10 +192,10 @@ export default function SignInPage() {
               {/* Sign In Button */}
               <Button
                 type="submit"
-                disabled={loginMutation.isPending}
+                disabled={isLoading}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50"
               >
-                {loginMutation.isPending ? "Signing In..." : "Sign In"}
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
 
               {/* Divider */}
