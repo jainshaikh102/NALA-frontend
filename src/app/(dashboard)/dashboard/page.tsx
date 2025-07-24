@@ -20,7 +20,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#222C41] text-white p-8">
       <div className="w-full mx-auto p-16">
         {/* Header Section */}
-        <div className="flex items-start justify-between w-full">
+        <div className="flex items-center justify-between w-full">
           <div className="flex flex-col w-2/4">
             <div className="flex items-center justify-start gap-3 mb-4">
               <div className="w-12 h-12 flex items-center justify-center">
@@ -74,13 +74,13 @@ export default function DashboardPage() {
             <Separator className="my-4" orientation="horizontal" />
           </div>
 
-          <div className="flex-shrink-0 ml-8 w-2/4">
-            <div className="w-1/2 h-auto flex items-center justify-center">
+          <div className="flex w-2/4">
+            <div className="w-full h-auto flex items-center justify-center">
               <Image
                 src="/svgs/Bot-Lion.svg"
                 alt="NALA Bot Lion"
-                width={498}
-                height={509}
+                width={550}
+                height={500}
                 className="object-contain"
               />
             </div>

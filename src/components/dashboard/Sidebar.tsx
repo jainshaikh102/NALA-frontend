@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,6 +13,16 @@ import {
   LogOut,
   Users,
 } from "lucide-react";
+import { useLogout } from "@/hooks/use-auth";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface NavigationItem {
   name: string;
@@ -58,6 +69,22 @@ const navigation: NavigationItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { logout } = useLogout();
+  const { user } = useAuthStore();
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true);
+  };
+
+  const handleConfirmLogout = () => {
+    logout();
+    setShowLogoutDialog(false);
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutDialog(false);
+  };
 
   return (
     <aside className="w-24 bg-background min-h-screen flex flex-col">
@@ -125,7 +152,10 @@ export default function Sidebar() {
         </div>
 
         {/* Logout */}
-        <button className="w-12 h-12 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 group relative">
+        <button
+          onClick={handleLogoutClick}
+          className="w-12 h-12 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 group relative"
+        >
           <LogOut className="w-5 h-5" />
 
           {/* Tooltip */}
@@ -134,6 +164,35 @@ export default function Sidebar() {
           </div>
         </button>
       </div>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to logout? You will need to sign in again to
+              access your account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelLogout}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmLogout}
+              className="w-full sm:w-auto"
+            >
+              Yes, Logout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }
