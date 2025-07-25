@@ -12,6 +12,7 @@ import {
   HelpCircle,
   LogOut,
   Users,
+  X,
 } from "lucide-react";
 import { useLogout } from "@/hooks/use-auth";
 import { useAuthStore } from "@/store/auth-store";
@@ -31,6 +32,11 @@ interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;
   isSpecial?: boolean;
   specialIcon?: string;
+}
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const navigation: NavigationItem[] = [
@@ -68,7 +74,7 @@ const navigation: NavigationItem[] = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useLogout();
   const { user } = useAuthStore();
@@ -88,16 +94,28 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-24 bg-background min-h-screen flex flex-col">
+    <aside className="h-full w-full flex flex-col">
+      {/* Mobile Close Button */}
+      <div className="lg:hidden flex justify-end p-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="text-white hover:bg-white/10"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
       {/* Logo */}
-      <div className="flex items-center justify-center py-6">
-        <div className="w-10 h-10 flex items-center justify-center">
+      <div className="flex items-center justify-center py-4 lg:py-6">
+        <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center">
           <Image
             src="/svgs/Blacklion-Logo.svg"
             alt="Logo"
             width={50}
             height={50}
-            className="filter"
+            className="filter w-full h-full object-contain"
           />
         </div>
       </div>
@@ -112,13 +130,14 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              onClick={onClose}
               className={`relative w-12 h-12 flex items-center justify-center rounded-lg transition-all duration-200 group ${
                 isActive
                   ? ""
                   : "text-white/70 hover:text-white hover:bg-white/10"
               }`}
             >
-              {/* Active indicator */}
+              {/* Active indicator - Left border */}
               {isActive && (
                 <div className="absolute -left-5 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-orange-500 rounded-r-full" />
               )}
