@@ -37,6 +37,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/store/auth-store";
 
 interface ChatMessage {
   id: number;
@@ -53,7 +54,7 @@ const ChatPage = () => {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [selectedModel, setSelectedModel] = useState(
     "deepseek-r1-distill-llama-70b"
@@ -65,6 +66,8 @@ const ChatPage = () => {
   const [isLoadingArtists, setIsLoadingArtists] = useState(false);
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
+
+  const { user, isAuthenticated, accessToken, isLoading } = useAuthStore();
 
   // Mock data for sources
   const sources = [
@@ -176,7 +179,7 @@ const ChatPage = () => {
       bgColor: "bg-[#FB5971]",
     },
   ];
-
+  console.log("User", user);
   // API Integration
   const sendMessage = async (question: string) => {
     if (!question.trim()) return;
@@ -193,12 +196,12 @@ const ChatPage = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
-    setIsLoading(true);
+    // setIsLoading(true);
 
     try {
       const payload = {
         question: question,
-        username: "jainshaikh",
+        username: user?.username,
         model_name: selectedModel,
       };
 
@@ -258,7 +261,7 @@ const ChatPage = () => {
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
     }
   };
 
@@ -866,7 +869,7 @@ const ChatPage = () => {
 
         {/* Chat Models Selection */}
         <div className="p-4 border-t border-border">
-          <div className="flex items-center justify-center space-x-2 mb-4">
+          <div className="flex items-center justify-center space-x-2 mb-4 flex-wrap gap-2">
             {chatModels.map((model) => (
               <div key={model.id} className="relative">
                 {/* Mobile/Tablet: Icon Only */}
