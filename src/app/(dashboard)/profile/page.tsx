@@ -383,15 +383,25 @@ const ProfilePage = () => {
           <Dialog open={showFeatures} onOpenChange={setShowFeatures}>
             <DialogContent className="sm:max-w-md lg:max-w-lg">
               <DialogHeader>
-                <DialogTitle className="text-primary text-sm font-medium">
+                {/* <DialogTitle className="text-primary text-sm font-medium">
                   FREE PLAN FEATURES INCLUDE
-                </DialogTitle>
+                </DialogTitle> */}
               </DialogHeader>
               <div className="space-y-4 py-4">
+                <h1 className="text-primary text-sm font-medium mb-4">
+                  FREE PLAN FEATURES INCLUDE
+                </h1>
                 {freePlanFeatures.map((feature, index) => (
                   <div key={index} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <Check className="w-3 h-3 text-white" />
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0">
+                      {/* <Check className="w-3 h-3 text-white" /> */}
+
+                      <Image
+                        alt="Check Icon"
+                        src={"/svgs/CheckCircle-PrimaryIcon.svg"}
+                        width={20}
+                        height={20}
+                      />
                     </div>
                     <span className="text-foreground text-sm">{feature}</span>
                   </div>
