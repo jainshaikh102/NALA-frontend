@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Check, X, Send, Download } from "lucide-react";
+import { Check, Send, Download } from "lucide-react";
 import { useState } from "react";
 import {
   Dialog,
@@ -377,47 +377,11 @@ const ProfilePage = () => {
                 </Tabs>
               </div>
             </div>
-
-            {/* Desktop Side Panel for Features */}
-            {showFeatures && (
-              <div className="hidden lg:block w-1/4">
-                <Card className="bg-background border-border">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-primary text-sm font-medium">
-                        FREE PLAN FEATURES INCLUDE
-                      </h3>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="w-6 h-6 p-0 text-muted-foreground hover:text-foreground rounded-full border-[1px] border-solid border-primary"
-                        onClick={() => setShowFeatures(false)}
-                      >
-                        <X className="w-4 h-4 text-primary" />
-                      </Button>
-                    </div>
-
-                    <div className="space-y-4">
-                      {freePlanFeatures.map((feature, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                            <Check className="w-3 h-3 text-white" />
-                          </div>
-                          <span className="text-foreground text-sm">
-                            {feature}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
           </div>
 
-          {/* Mobile Dialog for Features */}
+          {/* Dialog for Features - Shows on all screen sizes, centered properly */}
           <Dialog open={showFeatures} onOpenChange={setShowFeatures}>
-            <DialogContent className="sm:max-w-md lg:hidden">
+            <DialogContent className="sm:max-w-md lg:max-w-lg">
               <DialogHeader>
                 <DialogTitle className="text-primary text-sm font-medium">
                   FREE PLAN FEATURES INCLUDE
