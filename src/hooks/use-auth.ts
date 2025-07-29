@@ -1,5 +1,6 @@
 "use client";
-import { usePost } from "./use-api";
+import { useMutation } from "@tanstack/react-query";
+import { ApiError } from "@/lib/api-config";
 import { useAuthStore, User } from "@/store/auth-store";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -88,7 +89,32 @@ export function useLogin() {
   const { setAuth, setLoading } = useAuthStore();
   const router = useRouter();
 
-  return usePost<LoginResponse, LoginRequest>("auth/login", {
+  return useMutation<{ data: LoginResponse }, ApiError, LoginRequest>({
+    mutationFn: async (data: LoginRequest) => {
+      try {
+        console.log("useLogin - Making request to:", "/api/auth/login");
+        console.log("useLogin - Request data:", data);
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Login failed");
+        }
+
+        const responseData = await response.json();
+        console.log("useLogin - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useLogin - Error:", error);
+        throw error;
+      }
+    },
     onMutate: () => {
       console.log("Login mutation started");
       setLoading(true);
@@ -123,7 +149,32 @@ export function useLogin() {
 export function useRegister() {
   const router = useRouter();
 
-  return usePost<RegisterResponse, RegisterRequest>("auth/signup", {
+  return useMutation<{ data: RegisterResponse }, ApiError, RegisterRequest>({
+    mutationFn: async (data: RegisterRequest) => {
+      try {
+        console.log("useRegister - Making request to:", "/api/auth/signup");
+        console.log("useRegister - Request data:", data);
+        const response = await fetch("/api/auth/signup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Registration failed");
+        }
+
+        const responseData = await response.json();
+        console.log("useRegister - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useRegister - Error:", error);
+        throw error;
+      }
+    },
     onSuccess: (response) => {
       toast.success(
         response.data.message ||
@@ -140,27 +191,84 @@ export function useRegister() {
 export function useForgotPassword() {
   const router = useRouter();
 
-  return usePost<ForgotPasswordResponse, ForgotPasswordRequest>(
-    "/auth/forgot-password",
-    {
-      onSuccess: (response) => {
-        toast.success(response.data.message || "OTP sent to your email!");
-        // Redirect to OTP verification page with email
-        router.push(
-          `/verify-otp?email=${encodeURIComponent(response.data.email)}`
+  return useMutation<
+    { data: ForgotPasswordResponse },
+    ApiError,
+    ForgotPasswordRequest
+  >({
+    mutationFn: async (data: ForgotPasswordRequest) => {
+      try {
+        console.log(
+          "useForgotPassword - Making request to:",
+          "/api/auth/forgot-password"
         );
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to send OTP");
-      },
-    }
-  );
+        console.log("useForgotPassword - Request data:", data);
+        const response = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to send OTP");
+        }
+
+        const responseData = await response.json();
+        console.log("useForgotPassword - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useForgotPassword - Error:", error);
+        throw error;
+      }
+    },
+    onSuccess: (response) => {
+      toast.success(response.data.message || "OTP sent to your email!");
+      // Redirect to OTP verification page with email
+      router.push(
+        `/verify-otp?email=${encodeURIComponent(response.data.email)}`
+      );
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to send OTP");
+    },
+  });
 }
 
 export function useVerifyOTP() {
   const router = useRouter();
 
-  return usePost<VerifyOTPResponse, VerifyOTPRequest>("/auth/verify-otp", {
+  return useMutation<{ data: VerifyOTPResponse }, ApiError, VerifyOTPRequest>({
+    mutationFn: async (data: VerifyOTPRequest) => {
+      try {
+        console.log(
+          "useVerifyOTP - Making request to:",
+          "/api/auth/verify-otp"
+        );
+        console.log("useVerifyOTP - Request data:", data);
+        const response = await fetch("/api/auth/verify-otp", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Invalid or expired OTP");
+        }
+
+        const responseData = await response.json();
+        console.log("useVerifyOTP - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useVerifyOTP - Error:", error);
+        throw error;
+      }
+    },
     onSuccess: (response) => {
       console.log("response", response);
       toast.success(response.data.message || "OTP verified successfully!");
@@ -178,40 +286,98 @@ export function useVerifyOTP() {
 export function useResetPassword() {
   const router = useRouter();
 
-  return usePost<ResetPasswordResponse, ResetPasswordRequest>(
-    "/auth/reset-password",
-    {
-      onSuccess: (response) => {
-        toast.success(response.data.message || "Password reset successfully!");
-        // Clear reset token and redirect to login
-        sessionStorage.removeItem("reset_token");
-        router.push("/sign-in");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Failed to reset password");
-      },
-    }
-  );
+  return useMutation<
+    { data: ResetPasswordResponse },
+    ApiError,
+    ResetPasswordRequest
+  >({
+    mutationFn: async (data: ResetPasswordRequest) => {
+      try {
+        console.log(
+          "useResetPassword - Making request to:",
+          "/api/auth/reset-password"
+        );
+        console.log("useResetPassword - Request data:", data);
+        const response = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to reset password");
+        }
+
+        const responseData = await response.json();
+        console.log("useResetPassword - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useResetPassword - Error:", error);
+        throw error;
+      }
+    },
+    onSuccess: (response) => {
+      toast.success(response.data.message || "Password reset successfully!");
+      // Clear reset token and redirect to login
+      sessionStorage.removeItem("reset_token");
+      router.push("/sign-in");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to reset password");
+    },
+  });
 }
 
 export function useVerifyEmail() {
   const { setUser } = useAuthStore();
   const router = useRouter();
 
-  return usePost<VerifyEmailResponse, VerifyEmailRequest>(
-    "/auth/verify-email",
-    {
-      onSuccess: (response) => {
-        const { user, message } = response.data;
-        setUser(user);
-        toast.success(message || "Email verified successfully!");
-        router.push("/dashboard");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Email verification failed");
-      },
-    }
-  );
+  return useMutation<
+    { data: VerifyEmailResponse },
+    ApiError,
+    VerifyEmailRequest
+  >({
+    mutationFn: async (data: VerifyEmailRequest) => {
+      try {
+        console.log(
+          "useVerifyEmail - Making request to:",
+          "/api/auth/verify-email"
+        );
+        console.log("useVerifyEmail - Request data:", data);
+        const response = await fetch("/api/auth/verify-email", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Email verification failed");
+        }
+
+        const responseData = await response.json();
+        console.log("useVerifyEmail - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useVerifyEmail - Error:", error);
+        throw error;
+      }
+    },
+    onSuccess: (response) => {
+      const { user, message } = response.data;
+      setUser(user);
+      toast.success(message || "Email verified successfully!");
+      router.push("/dashboard");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Email verification failed");
+    },
+  });
 }
 
 export function useLogout() {

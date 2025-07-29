@@ -20,7 +20,7 @@ export default function DebugSignupPage() {
     setLoading(true);
     try {
       console.log("Testing direct signup call...");
-      const response = await fetch("https://backend.nalabot.com/auth/signup", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,7 +80,7 @@ export default function DebugSignupPage() {
   const testVariation1 = async () => {
     setLoading(true);
     try {
-      const response = await fetch("https://backend.nalabot.com/auth/signup", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -125,7 +125,7 @@ export default function DebugSignupPage() {
   const testVariation2 = async () => {
     setLoading(true);
     try {
-      const response = await fetch("https://backend.nalabot.com/auth/signup", {
+      const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

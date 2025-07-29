@@ -1,4 +1,6 @@
 import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { AlertTriangle, ChevronDown } from "lucide-react";
 import {
   TextDisplay,
   ErrorDisplay,
@@ -6,7 +8,10 @@ import {
   KeyValueDisplay,
   ViralityReportDisplay,
   ForecastChartDisplay,
+  PlaylistRecommendationDisplay,
+  MultiForecastDisplay,
   MultiSectionReportDisplay,
+  MixedContentDisplay,
 } from "./DataDisplayComponents";
 
 interface ResponseRendererProps {
@@ -15,12 +20,218 @@ interface ResponseRendererProps {
   dataType: string;
 }
 
+// Enhanced interface for handling multiple data sections
+interface MultiDataResponse {
+  sections: Array<{
+    type: string;
+    data: unknown;
+    title?: string;
+  }>;
+}
+
+// Helper function to detect if displayData contains multiple sections
+const isMultiDataResponse = (
+  displayData: unknown
+): displayData is MultiDataResponse => {
+  return (
+    typeof displayData === "object" &&
+    displayData !== null &&
+    "sections" in displayData &&
+    Array.isArray((displayData as any).sections)
+  );
+};
+
+// Helper function to detect if displayData is an array of different data types
+const isArrayOfDataSections = (displayData: unknown): boolean => {
+  return Array.isArray(displayData) && displayData.length > 0;
+};
+
+/**
+ * Enhanced ResponseRenderer that can handle multiple data types in a single response.
+ *
+ * Supports:
+ * 1. Single data type responses (original functionality)
+ * 2. Multiple sections with different data types
+ * 3. Array of data items with auto-detection
+ * 4. Mixed content with both text and structured data
+ *
+ * Example response formats:
+ *
+ * // Multiple sections format:
+ * displayData: {
+ *   sections: [
+ *     { type: "dataframe", data: {...}, title: "Top Tracks" },
+ *     { type: "key_value", data: {...}, title: "Summary Metrics" }
+ *   ]
+ * }
+ *
+ * // Array of different data types:
+ * displayData: [
+ *   { index: [...], columns: [...], data: [...] }, // dataframe
+ *   { metric1: 100, metric2: 200 }, // key_value
+ *   { final_score: 85, verdict: "High" } // virality_report
+ * ]
+ *
+ * // Single data type (existing format):
+ * displayData: { index: [...], columns: [...], data: [...] }
+ * dataType: "dataframe"
+ */
 export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
   answerStr,
   displayData,
   dataType,
 }) => {
+  // Helper function to render individual data sections
+  const renderDataSection = (type: string, data: unknown, title?: string) => {
+    const sectionContent = (() => {
+      switch (type) {
+        case "dataframe":
+          return <DataFrameDisplay data={data as any} />;
+        case "key_value":
+          return <KeyValueDisplay data={data as any} />;
+        case "virality_report":
+          return <ViralityReportDisplay data={data as any} />;
+        case "forecast_chart":
+          return <ForecastChartDisplay data={data as any} />;
+        case "playlist_recommendation_report":
+          return <PlaylistRecommendationDisplay data={data as any} />;
+        case "multi_forecast_display":
+          return <MultiForecastDisplay data={data as any} />;
+        case "text":
+          return <TextDisplay content={data as string} />;
+        case "error":
+          return <ErrorDisplay content={data as string} />;
+        default:
+          return (
+            <div className="p-4 bg-muted/30 rounded">
+              <p className="text-sm text-muted-foreground mb-2">
+                Unknown section type: {type}
+              </p>
+              <pre className="text-xs overflow-auto">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </div>
+          );
+      }
+    })();
+
+    return (
+      <div key={`${type}-${title || "section"}`} className="space-y-2">
+        {title && (
+          <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+        )}
+        {sectionContent}
+      </div>
+    );
+  };
+
   const renderContent = () => {
+    // Check if displayData contains multiple sections
+    if (isMultiDataResponse(displayData)) {
+      return (
+        <div className="space-y-6">
+          {/* Show the answer text first if available */}
+          {answerStr && <TextDisplay content={answerStr} />}
+          {/* Render each section */}
+          {displayData.sections.map((section, index) =>
+            renderDataSection(section.type, section.data, section.title)
+          )}
+        </div>
+      );
+    }
+
+    // Check if displayData is an array of different data sections
+    if (isArrayOfDataSections(displayData)) {
+      const dataArray = displayData as any[];
+      return (
+        <div className="space-y-6">
+          {/* Show the answer text first if available */}
+          {answerStr && <TextDisplay content={answerStr} />}
+          {/* Render each item in the array */}
+          {dataArray.map((item, index) => {
+            // Try to detect the type of each item
+            if (item && typeof item === "object") {
+              // Check for dataframe structure (new format with dataframe property)
+              if (
+                item.dataframe &&
+                item.dataframe.index &&
+                item.dataframe.columns &&
+                item.dataframe.data
+              ) {
+                return renderDataSection(
+                  "dataframe",
+                  item,
+                  `Data Table ${index + 1}`
+                );
+              }
+              // Check for legacy dataframe structure (direct properties)
+              if (item.index && item.columns && item.data) {
+                return renderDataSection(
+                  "dataframe",
+                  { dataframe: item },
+                  `Data Table ${index + 1}`
+                );
+              }
+              // Check for key-value structure (new format with data property)
+              if (item.data && typeof item.data === "object") {
+                const keyValueData = item.data;
+                if (
+                  Object.keys(keyValueData).every(
+                    (key) =>
+                      typeof keyValueData[key] === "string" ||
+                      typeof keyValueData[key] === "number"
+                  )
+                ) {
+                  return renderDataSection(
+                    "key_value",
+                    item,
+                    `Metrics ${index + 1}`
+                  );
+                }
+              }
+              // Check for legacy key-value structure (direct key-value pairs)
+              if (
+                Object.keys(item).every(
+                  (key) =>
+                    typeof item[key] === "string" ||
+                    typeof item[key] === "number"
+                )
+              ) {
+                return renderDataSection(
+                  "key_value",
+                  { data: item },
+                  `Metrics ${index + 1}`
+                );
+              }
+              // Check for virality report structure
+              if (
+                item.final_score !== undefined &&
+                item.verdict !== undefined
+              ) {
+                return renderDataSection(
+                  "virality_report",
+                  item,
+                  `Report ${index + 1}`
+                );
+              }
+            }
+            // Fallback to generic display
+            return (
+              <div key={index} className="p-4 bg-muted/30 rounded">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Data Section {index + 1}
+                </p>
+                <pre className="text-xs overflow-auto">
+                  {JSON.stringify(item, null, 2)}
+                </pre>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Original single data type handling
     switch (dataType) {
       case "text":
         return <TextDisplay content={answerStr} />;
@@ -32,61 +243,116 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
         return (
           <div className="space-y-4">
             {/* Show the answer text first */}
-            <TextDisplay content={answerStr} />
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
             {/* Then show the data table */}
-            {displayData && <DataFrameDisplay data={displayData as any} />}
+            {displayData ? (
+              <DataFrameDisplay data={displayData as any} />
+            ) : null}
           </div>
         );
 
       case "key_value":
         return (
           <div className="space-y-4">
-            {answerStr && <TextDisplay content={answerStr} />}
-            {displayData && <KeyValueDisplay data={displayData as any} />}
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? <KeyValueDisplay data={displayData as any} /> : null}
           </div>
         );
 
       case "virality_report":
         return (
           <div className="space-y-4">
-            {answerStr && <TextDisplay content={answerStr} />}
-            {displayData && <ViralityReportDisplay data={displayData as any} />}
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <ViralityReportDisplay data={displayData as any} />
+            ) : null}
           </div>
         );
 
       case "forecast_chart":
         return (
           <div className="space-y-4">
-            {answerStr && <TextDisplay content={answerStr} />}
-            {displayData && <ForecastChartDisplay data={displayData as any} />}
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <ForecastChartDisplay data={displayData as any} />
+            ) : null}
+          </div>
+        );
+
+      case "playlist_recommendation_report":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <PlaylistRecommendationDisplay data={displayData as any} />
+            ) : null}
+          </div>
+        );
+
+      case "multi_forecast_display":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <MultiForecastDisplay data={displayData as any} />
+            ) : null}
           </div>
         );
 
       case "multi_section_report":
         return (
           <div className="space-y-4">
-            {answerStr && <TextDisplay content={answerStr} />}
-            {displayData && (
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
               <MultiSectionReportDisplay data={displayData as any} />
-            )}
+            ) : null}
           </div>
         );
 
+      case "mixed_content":
+        return (
+          <MixedContentDisplay
+            textContent={answerStr}
+            structuredData={displayData}
+            dataType={dataType}
+          />
+        );
+
       default:
-        // Fallback to text display for unknown types
+        // Enhanced fallback for unknown data types according to specification
+        console.warn(`[ResponseRenderer] Unhandled data_type: ${dataType}`);
+
         return (
           <div className="space-y-4">
-            <TextDisplay content={answerStr} />
-            {displayData && (
-              <div className="p-4 bg-muted/30 rounded">
-                <p className="text-sm text-muted-foreground mb-2">
-                  Unknown data type: {dataType}
-                </p>
-                <pre className="text-xs overflow-auto">
-                  {JSON.stringify(displayData, null, 2)}
-                </pre>
-              </div>
-            )}
+            {/* Display answer_str as primary content */}
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+
+            {/* Show raw JSON in expandable/collapsible section */}
+            {displayData ? (
+              <Card className="border-yellow-200 bg-yellow-50/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">
+                      Unknown Data Type: {dataType}
+                    </span>
+                  </div>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    This data type is not yet supported. The raw response data
+                    is shown below:
+                  </p>
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm text-yellow-600 hover:text-yellow-800 flex items-center gap-1">
+                      <ChevronDown className="h-3 w-3 group-open:rotate-180 transition-transform" />
+                      View Raw Response Data
+                    </summary>
+                    <pre className="mt-2 p-2 bg-yellow-100 rounded text-xs overflow-auto max-h-60 text-yellow-900">
+                      {JSON.stringify(displayData, null, 2)}
+                    </pre>
+                  </details>
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         );
     }

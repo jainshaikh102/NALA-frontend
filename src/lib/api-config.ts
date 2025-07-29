@@ -42,11 +42,23 @@ apiClient.interceptors.response.use(
 
       if (refreshToken) {
         try {
-          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
+          const res = await fetch("/api/auth/refresh", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              refresh_token: refreshToken,
+            }),
           });
 
-          const { access_token, refresh_token: newRefreshToken } = res.data;
+          if (!res.ok) {
+            throw new Error("Refresh token failed");
+          }
+
+          const data = await res.json();
+
+          const { access_token, refresh_token: newRefreshToken } = data;
 
           const { setAuth, user } = useAuthStore.getState();
           if (user) {

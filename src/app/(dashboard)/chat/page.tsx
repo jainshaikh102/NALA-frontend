@@ -3,8 +3,6 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ResponseRenderer } from "@/components/chat/ResponseRenderer";
 
@@ -22,20 +20,11 @@ import {
   Globe,
   PanelRight,
   Loader2,
-  Search,
-  X,
-  Play,
-  Image as ImageIcon,
   Info,
+  Upload,
 } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -54,11 +43,8 @@ const ChatPage = () => {
   const [leftPanelOpen, setLeftPanelOpen] = useState(true);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [inputText, setInputText] = useState("");
-  // const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [selectedModel, setSelectedModel] = useState(
-    "deepseek-r1-distill-llama-70b"
-  );
   const [isRosterDialogOpen, setIsRosterDialogOpen] = useState(false);
   const [allArtists, setAllArtists] = useState<string[]>([]);
   const [filteredArtists, setFilteredArtists] = useState<string[]>([]);
@@ -66,8 +52,9 @@ const ChatPage = () => {
   const [isLoadingArtists, setIsLoadingArtists] = useState(false);
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
+  const [isAddSourceDialogOpen, setIsAddSourceDialogOpen] = useState(false);
 
-  const { user, isAuthenticated, accessToken, isLoading } = useAuthStore();
+  const { user } = useAuthStore();
 
   // Mock data for sources
   const sources = [
@@ -98,88 +85,6 @@ const ChatPage = () => {
     "Which of the selected artists has more followers on Instagram?",
   ];
 
-  // Chat models with API model names
-  const chatModels = [
-    {
-      id: 1,
-      name: "Deep Seek",
-      apiName: "deepseek-r1-distill-llama-70b",
-      active: selectedModel === "deepseek-r1-distill-llama-70b",
-      color: "bg-red-500",
-      icon: "/svgs/DeepSeek-Icon.svg",
-      bgColor: "bg-white",
-    },
-    {
-      id: 2,
-      name: "Chat GPT",
-      apiName: "gpt-4.1",
-      active: selectedModel === "gpt-4.1",
-      color: "bg-green-500",
-      icon: "/svgs/ChatGPT-Icon.svg",
-      bgColor: "bg-black",
-    },
-    {
-      id: 3,
-      name: "LLAMA",
-      apiName: "llama-3.1-8b-instant",
-      active: selectedModel === "llama-3.1-8b-instant",
-      color: "bg-blue-500",
-      icon: "/svgs/LLAMA-Icon.svg",
-      bgColor: "bg-white",
-    },
-    {
-      id: 4,
-      name: "GEMINI",
-      apiName: "gemini-2.0-flash-001",
-      active: selectedModel === "gemini-2.0-flash-001",
-      color: "bg-gray-500",
-      icon: "/svgs/GEMINI-Icon.svg",
-      bgColor: "bg-white",
-    },
-    {
-      id: 5,
-      name: "MIXTRAL",
-      apiName: "mixtral-8x7b-32768",
-      active: selectedModel === "mixtral-8x7b-32768",
-      color: "bg-gray-500",
-      icon: "/svgs/MIXTRAL-Icon.svg",
-      bgColor: "bg-red-500",
-    },
-  ];
-
-  const SocialMedia = [
-    {
-      id: 1,
-      name: "YouTube",
-      icon: "/svgs/Youtube-WhiteIcon.svg",
-      bgColor: "bg-red-500",
-    },
-    {
-      id: 2,
-      name: "Spotify",
-      icon: "/svgs/Spotify-WhiteIcon.svg",
-      bgColor: "bg-green-500",
-    },
-    {
-      id: 3,
-      name: "SoundCloud",
-      icon: "/svgs/SoundCloud-WhiteIcon.svg",
-      bgColor: "bg-[#F37422]",
-    },
-    {
-      id: 4,
-      name: "Deezer",
-      icon: "/svgs/Deezer-Icon.svg",
-      bgColor: "bg-black",
-    },
-    {
-      id: 5,
-      name: "Apple Music",
-      icon: "/svgs/AppleMusic-WhiteIcon.svg",
-      bgColor: "bg-[#FB5971]",
-    },
-  ];
-  console.log("User", user);
   // API Integration
   const sendMessage = async (question: string) => {
     if (!question.trim()) return;
@@ -196,27 +101,24 @@ const ChatPage = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
-    // setIsLoading(true);
+    setIsLoading(true);
 
     try {
       const payload = {
         question: question,
         username: user?.username,
-        model_name: selectedModel,
+        model_name: "gemini-2.0-flash-001",
       };
 
       console.log("Sending payload:", payload);
 
-      const response = await fetch(
-        "https://backend.nalabot.com/execute_query",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await fetch("/api/chat/execute-query", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
       console.log("Response status:", response.status);
       console.log("Response headers:", response.headers);
@@ -261,17 +163,13 @@ const ChatPage = () => {
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      // setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(inputText);
-  };
-
-  const handleModelSelect = (apiName: string) => {
-    setSelectedModel(apiName);
   };
 
   // Load selected artists from localStorage on component mount
@@ -286,7 +184,7 @@ const ChatPage = () => {
   const fetchAllArtists = async () => {
     setIsLoadingArtists(true);
     try {
-      const response = await fetch("https://backend.nalabot.com/artists", {
+      const response = await fetch("/api/artists", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -364,18 +262,6 @@ const ChatPage = () => {
     }
   };
 
-  // Right panel tools
-  const rightPanelTools = [
-    { icon: Volume2, label: "Audio" },
-    { icon: FileText, label: "Documents" },
-    { icon: Users, label: "Collaborators" },
-    { icon: Settings, label: "Settings" },
-    { icon: Lightbulb, label: "Ideas" },
-    { icon: Zap, label: "Quick Actions" },
-    { icon: Globe, label: "Web Search" },
-    { icon: Plus, label: "Add Tool" },
-  ];
-
   return (
     <div className="h-screen bg-secondary flex flex-col lg:flex-row gap-2 lg:gap-4 p-2 lg:p-4 overflow-hidden">
       {/* Left Panel - Sources, Rosters, Queries */}
@@ -416,10 +302,147 @@ const ChatPage = () => {
                     <PanelRight className="h-4 w-4" />
                   </Button>
                 </div>
-                <Button className="w-full bg-secondary hover:bg-primary/90 text-primary-foreground border-solid border-[1px] border-[#ffffff]/50 rounded-full">
-                  <Plus className="h-4 w-4 mr-2" />
-                  ADD SOURCE
-                </Button>
+                <Dialog
+                  open={isAddSourceDialogOpen}
+                  onOpenChange={setIsAddSourceDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button className="w-full bg-[secondary] hover:bg-primary/90 text-primary-foreground border-solid border-[1px] border-[#ffffff]/50 rounded-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      ADD SOURCE
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="w-full max-w-5xl sm:max-w-5xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+                    {/* Header with Bot Lion */}
+                    <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
+                      <Image
+                        src="/svgs/Bot-Lion.svg"
+                        alt="Bot Lion"
+                        width={110}
+                        height={100}
+                        className="object-contain absolute -top-1"
+                      />
+                      <Separator className="mt-15 z-50" />
+                    </div>
+
+                    {/* Title and Description */}
+                    <div className="px-8 pb-4 text-start">
+                      <h2 className="text-2xl font-semibold text-white mb-2">
+                        ADD SOURCES
+                      </h2>
+                      <p className="text-gray-300 text-sm">
+                        Sources let NALA tailor its insights based on the data
+                        that matters most to your music journey.
+                      </p>
+                    </div>
+
+                    {/* File Upload Area */}
+                    <div className="px-8 pb-4">
+                      <div className="border-2 border-dashed border-background rounded-lg p-12 text-center bg-[#151E31] hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="w-12 h-12 rounded-full bg-[#FFFFFF]/20 hover:bg-[#ffffff]/10 flex items-center justify-center">
+                            <Upload className="h-6 w-6 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-white text-lg font-medium mb-2">
+                              DRAG AND DROP
+                            </h3>
+                            <p className="text-gray-400 mb-4">Or</p>
+                            <Button className="bg-[#6B7280] hover:bg-[#FFFFFF]/5 text-white px-8 py-2 rounded-full">
+                              Upload File
+                            </Button>
+                          </div>
+                          <p className="text-gray-400 text-sm">
+                            Supported file types: PDF, txt, Markdown, Audio,
+                            Video (e.g. mp3)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Source Options */}
+                    <div className="px-8 pb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Google Drive */}
+                        <div className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
+                          <div className="flex flex-col items-start space-y-10">
+                            <h3 className="text-white font-bold text-xl">
+                              Google Drive
+                            </h3>
+                            <div className="flex items-center space-x-4">
+                              <Image
+                                src="/svgs/GoogleDrive-WhiteIcon.svg"
+                                alt="Google Drive"
+                                width={60}
+                                height={52}
+                                className="opacity-50 hover:opacity-100"
+                              />
+                              <Image
+                                src="/svgs/DropBox-WhiteIcon.svg"
+                                alt="Dropbox"
+                                width={60}
+                                height={60}
+                                className="opacity-50 hover:opacity-100"
+                              />
+                              <Image
+                                src="/Cloud-WhiteIcon.png"
+                                alt="Dropbox"
+                                width={60}
+                                height={60}
+                                className="opacity-50 hover:opacity-100"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Link */}
+                        <div className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
+                          <div className="flex flex-col items-start space-y-10">
+                            <h3 className="text-white font-bold text-xl">
+                              Link
+                            </h3>
+                            <div className="flex items-center space-x-4">
+                              <Image
+                                src="/svgs/Chain-WhiteIcon.svg"
+                                alt="Google Drive"
+                                width={60}
+                                height={60}
+                                className="opacity-50 hover:opacity-100"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Copy & Paste */}
+                        <div className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
+                          <div className="flex flex-col items-start space-y-10">
+                            <h3 className="text-white font-bold text-xl">
+                              Copy Paste
+                            </h3>
+                            <div className="flex items-center space-x-4">
+                              <Image
+                                src="/svgs/File-WhiteIcon.svg"
+                                alt="Google Drive"
+                                width={60}
+                                height={52}
+                                className="opacity-50 hover:opacity-100"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Button */}
+                    <div className="px-8 pb-8">
+                      <div className="px-8 p-8 bg-[#151E31] rounded-lg flex items-center justify-center">
+                        <Button className="w-full max-w-lg bg-[#E55351] hover:bg-[#E55351]/90 text-white py-3 rounded-full font-medium">
+                          Spotlight Roster
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               {/* Sources List */}
@@ -449,7 +472,7 @@ const ChatPage = () => {
                   </div>
                 ))}
 
-                <div className="flex items-center justify-center space-x-2 pt-2">
+                {/* <div className="flex items-center justify-center space-x-2 pt-2">
                   {SocialMedia.map((social) => (
                     <div
                       key={social.id}
@@ -465,7 +488,7 @@ const ChatPage = () => {
                       />
                     </div>
                   ))}
-                </div>
+                </div> */}
               </div>
 
               {/* Rosters Section */}
@@ -491,37 +514,44 @@ const ChatPage = () => {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden bg-background">
-                      <div className="flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
+                    <DialogContent className="w-full max-w-2xl sm:max-w-2xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+                      {/* Header with Bot Lion */}
+                      <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
                         <Image
                           src="/svgs/Bot-Lion.svg"
-                          alt="Paw"
+                          alt="Bot Lion"
                           width={110}
                           height={100}
-                          className="object-contain absolute -top-1 "
+                          className="object-contain absolute -top-1"
                         />
-                        <Separator className="mt-15 z-50 " />
+                        <Separator className="mt-15 z-50" />
                       </div>
 
-                      <div className="space-y-4 ">
-                        {/* Search Input */}
-                        <div className="relative rounded-full overflow-hidden">
-                          <Input
-                            placeholder="Search artists..."
-                            value={searchQuery}
-                            onChange={(e) => handleSearchChange(e.target.value)}
-                            className="pr-10 bg-background border-border text-white placeholder:text-border"
-                          />
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <Image
-                              src="/svgs/Golden-Paw.svg"
-                              alt="Paw"
-                              width={16}
-                              height={16}
-                            />
-                          </div>
-                        </div>
+                      <div className="px-8 pb-4 text-start">
+                        <h2 className="text-2xl font-semibold text-white mb-2">
+                          Add New Artist
+                        </h2>
+                      </div>
 
+                      {/* Search Input */}
+                      <div className="relative rounded-full overflow-hidden px-8 pb-4">
+                        <Input
+                          placeholder="Search artists..."
+                          value={searchQuery}
+                          onChange={(e) => handleSearchChange(e.target.value)}
+                          className="pr-10 bg-background border-border text-white placeholder:text-border rounded-full"
+                        />
+                        <div className="absolute right-12 top-4.5 transform -translate-y-1/2">
+                          <Image
+                            src="/svgs/Golden-Paw.svg"
+                            alt="Paw"
+                            width={16}
+                            height={16}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 px-8 pb-4">
                         {/* Select All / Clear All */}
                         {filteredArtists.length > 0 && (
                           <div className="flex justify-between items-center py-2 border-b border-gray-600">
@@ -869,62 +899,6 @@ const ChatPage = () => {
 
         {/* Chat Models Selection */}
         <div className="p-4 border-t border-border">
-          <div className="flex items-center justify-center space-x-2 mb-4 flex-wrap gap-2">
-            {chatModels.map((model) => (
-              <div key={model.id} className="relative">
-                {/* Mobile/Tablet: Icon Only */}
-                <Button
-                  variant={model.active ? "default" : "outline"}
-                  size="icon"
-                  className={`2xl:hidden w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                    model.active
-                      ? "bg-primary text-primary-foreground border-primary border-2 shadow-lg scale-110"
-                      : `bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border hover:scale-105 ${model.bgColor}`
-                  }`}
-                  onClick={() => handleModelSelect(model.apiName)}
-                >
-                  <Image
-                    src={model.icon}
-                    alt={model.name}
-                    width={20}
-                    height={20}
-                    className={model.active ? "brightness-0 invert" : ""}
-                  />
-                </Button>
-
-                {/* Desktop: Full Badge */}
-                <Badge
-                  variant={model.active ? "default" : "secondary"}
-                  className={`hidden 2xl:flex cursor-pointer transition-all rounded-full px-4 py-2 items-center justify-center gap-2 ${
-                    model.active
-                      ? "bg-primary text-primary-foreground border-primary border-2 shadow-lg"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:scale-105"
-                  }`}
-                  onClick={() => handleModelSelect(model.apiName)}
-                >
-                  <Button
-                    variant={"outline"}
-                    size={"icon"}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border-none ${
-                      model.active
-                        ? "bg-white"
-                        : `hover:${model.bgColor} ${model.bgColor}`
-                    }`}
-                  >
-                    <Image
-                      src={model.icon}
-                      alt={model.name}
-                      width={20}
-                      height={20}
-                      className={model.active ? "" : ""}
-                    />
-                  </Button>
-                  {model.name}
-                </Badge>
-              </div>
-            ))}
-          </div>
-
           {/* Chat Input */}
           <div className="relative">
             <form onSubmit={handleSubmit}>
@@ -962,246 +936,240 @@ const ChatPage = () => {
           </div>
         </div>
       </div>
-
-      {/* Right Panel - Studio/Note */}
-      <div
-        className={`${
-          rightPanelOpen
-            ? "w-full lg:w-60 xl:w-72 2xl:w-96 h-64 lg:h-auto"
-            : "hidden lg:block lg:w-16"
-        } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg flex-shrink-0`}
-      >
-        <div className="h-full flex flex-col">
-          {rightPanelOpen ? (
-            <div className="h-full overflow-y-auto">
-              {/* Mobile Close Button */}
-              <div className="lg:hidden p-2 border-b border-border">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setRightPanelOpen(false)}
-                  className="h-8 w-8 ml-auto"
-                >
-                  ×
-                </Button>
-              </div>
-
-              {/* Studio Section */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Studio
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setRightPanelOpen(false)}
-                    className="h-6 w-6 hidden lg:block"
-                  >
-                    <PanelRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Audio Section */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Audio
-                  </h2>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={"ghost"}
-                      size={"icon"}
-                      className="bg-[#FFFFFF4D] rounded-full"
-                    >
-                      {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
-                      <Image
-                        src={"/svgs/Speaker-WhiteIcon.svg"}
-                        alt="Google Drive"
-                        width={16}
-                        height={16}
-                      />
-                    </Button>
-                    <span className="text-[14px] text-muted-foreground">
-                      Deep Dive Conversation
-                    </span>
-                  </div>
-
-                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
-                    Generate
-                  </Button>
-                </div>
-              </div>
-
-              {/* Video Section */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Video
-                  </h2>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={"ghost"}
-                      size={"icon"}
-                      className="bg-[#FFFFFF4D] rounded-full"
-                    >
-                      {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
-                      <Image
-                        src={"/svgs/Video-WhiteIcon.svg"}
-                        alt="Google Drive"
-                        width={16}
-                        height={16}
-                      />
-                    </Button>
-                    <span className="text-[14px] text-muted-foreground">
-                      Deep Dive Conversation
-                    </span>
-                  </div>
-
-                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
-                    Generate
-                  </Button>
-                </div>
-              </div>
-
-              {/* Image Section */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Image
-                  </h2>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant={"ghost"}
-                      size={"icon"}
-                      className="bg-[#FFFFFF4D] rounded-full"
-                    >
-                      {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
-                      <Image
-                        src={"/svgs/Image-WhiteIcon.svg"}
-                        alt="Google Drive"
-                        width={16}
-                        height={16}
-                      />
-                    </Button>
-                    <span className="text-[14px] text-muted-foreground">
-                      Deep Dive Conversation
-                    </span>
-                  </div>
-
-                  <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
-                    Generate
-                  </Button>
-                </div>
-              </div>
-
-              {/* Notes Section */}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Notes
-                  </h2>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <Info className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Add Note Button */}
-                <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground mb-4 justify-center">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Note
-                </Button>
-
-                {/* Notes List */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                      <span className="text-sm text-foreground">Note 1</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                      <span className="text-sm text-foreground">Note 1</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-                      <span className="text-sm text-foreground">Note 1</span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-full flex flex-col items-center py-4 space-y-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setRightPanelOpen(true)}
-                className="h-10 w-10"
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Volume2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <FileText className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Users className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Settings className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Lightbulb className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Zap className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Globe className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
 
 export default ChatPage;
+
+// {
+//   {
+//     /* Right Panel - Studio/Note */
+//   }
+//   <div
+//     className={`${
+//       rightPanelOpen
+//         ? "w-full lg:w-60 xl:w-72 2xl:w-96 h-64 lg:h-auto"
+//         : "hidden lg:block lg:w-16"
+//     } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg flex-shrink-0`}
+//   >
+//     <div className="h-full flex flex-col">
+//       {rightPanelOpen ? (
+//         <div className="h-full overflow-y-auto">
+//           {/* Mobile Close Button */}
+//           <div className="lg:hidden p-2 border-b border-border">
+//             <Button
+//               variant="ghost"
+//               size="icon"
+//               onClick={() => setRightPanelOpen(false)}
+//               className="h-8 w-8 ml-auto"
+//             >
+//               ×
+//             </Button>
+//           </div>
+
+//           {/* Studio Section */}
+//           <div className="p-4 border-b border-border">
+//             <div className="flex items-center justify-between mb-3">
+//               <h2 className="text-lg font-semibold text-foreground">Studio</h2>
+//               <Button
+//                 variant="ghost"
+//                 size="icon"
+//                 onClick={() => setRightPanelOpen(false)}
+//                 className="h-6 w-6 hidden lg:block"
+//               >
+//                 <PanelRight className="h-4 w-4" />
+//               </Button>
+//             </div>
+//           </div>
+
+//           {/* Audio Section */}
+//           <div className="p-4 border-b border-border">
+//             <div className="flex items-center justify-between mb-3">
+//               <h2 className="text-lg font-semibold text-foreground">Audio</h2>
+//               <Button variant="ghost" size="icon" className="h-6 w-6">
+//                 <Info className="h-4 w-4" />
+//               </Button>
+//             </div>
+//             <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
+//               <div className="flex items-center gap-2">
+//                 <Button
+//                   variant={"ghost"}
+//                   size={"icon"}
+//                   className="bg-[#FFFFFF4D] rounded-full"
+//                 >
+//                   {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
+//                   <Image
+//                     src={"/svgs/Speaker-WhiteIcon.svg"}
+//                     alt="Google Drive"
+//                     width={16}
+//                     height={16}
+//                   />
+//                 </Button>
+//                 <span className="text-[14px] text-muted-foreground">
+//                   Deep Dive Conversation
+//                 </span>
+//               </div>
+
+//               <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
+//                 Generate
+//               </Button>
+//             </div>
+//           </div>
+
+//           {/* Video Section */}
+//           <div className="p-4 border-b border-border">
+//             <div className="flex items-center justify-between mb-3">
+//               <h2 className="text-lg font-semibold text-foreground">Video</h2>
+//               <Button variant="ghost" size="icon" className="h-6 w-6">
+//                 <Info className="h-4 w-4" />
+//               </Button>
+//             </div>
+//             <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
+//               <div className="flex items-center gap-2">
+//                 <Button
+//                   variant={"ghost"}
+//                   size={"icon"}
+//                   className="bg-[#FFFFFF4D] rounded-full"
+//                 >
+//                   {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
+//                   <Image
+//                     src={"/svgs/Video-WhiteIcon.svg"}
+//                     alt="Google Drive"
+//                     width={16}
+//                     height={16}
+//                   />
+//                 </Button>
+//                 <span className="text-[14px] text-muted-foreground">
+//                   Deep Dive Conversation
+//                 </span>
+//               </div>
+
+//               <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
+//                 Generate
+//               </Button>
+//             </div>
+//           </div>
+
+//           {/* Image Section */}
+//           <div className="p-4 border-b border-border">
+//             <div className="flex items-center justify-between mb-3">
+//               <h2 className="text-lg font-semibold text-foreground">Image</h2>
+//               <Button variant="ghost" size="icon" className="h-6 w-6">
+//                 <Info className="h-4 w-4" />
+//               </Button>
+//             </div>
+//             <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
+//               <div className="flex items-center gap-2">
+//                 <Button
+//                   variant={"ghost"}
+//                   size={"icon"}
+//                   className="bg-[#FFFFFF4D] rounded-full"
+//                 >
+//                   {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
+//                   <Image
+//                     src={"/svgs/Image-WhiteIcon.svg"}
+//                     alt="Google Drive"
+//                     width={16}
+//                     height={16}
+//                   />
+//                 </Button>
+//                 <span className="text-[14px] text-muted-foreground">
+//                   Deep Dive Conversation
+//                 </span>
+//               </div>
+
+//               <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
+//                 Generate
+//               </Button>
+//             </div>
+//           </div>
+
+//           {/* Notes Section */}
+//           <div className="p-4">
+//             <div className="flex items-center justify-between mb-3">
+//               <h2 className="text-lg font-semibold text-foreground">Notes</h2>
+//               <Button variant="ghost" size="icon" className="h-6 w-6">
+//                 <Info className="h-4 w-4" />
+//               </Button>
+//             </div>
+
+//             {/* Add Note Button */}
+//             <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground mb-4 justify-center">
+//               <Plus className="h-4 w-4 mr-2" />
+//               Add Note
+//             </Button>
+
+//             {/* Notes List */}
+//             <div className="space-y-3">
+//               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+//                 <div className="flex items-center space-x-3">
+//                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+//                   <span className="text-sm text-foreground">Note 1</span>
+//                 </div>
+//                 <Button variant="ghost" size="icon" className="h-6 w-6">
+//                   <MoreHorizontal className="h-4 w-4" />
+//                 </Button>
+//               </div>
+
+//               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+//                 <div className="flex items-center space-x-3">
+//                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+//                   <span className="text-sm text-foreground">Note 1</span>
+//                 </div>
+//                 <Button variant="ghost" size="icon" className="h-6 w-6">
+//                   <MoreHorizontal className="h-4 w-4" />
+//                 </Button>
+//               </div>
+
+//               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
+//                 <div className="flex items-center space-x-3">
+//                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+//                   <span className="text-sm text-foreground">Note 1</span>
+//                 </div>
+//                 <Button variant="ghost" size="icon" className="h-6 w-6">
+//                   <MoreHorizontal className="h-4 w-4" />
+//                 </Button>
+//               </div>
+//             </div>
+//           </div>
+//         </div>
+//       ) : (
+//         <div className="h-full flex flex-col items-center py-4 space-y-4">
+//           <Button
+//             variant="ghost"
+//             size="icon"
+//             onClick={() => setRightPanelOpen(true)}
+//             className="h-10 w-10"
+//           >
+//             <PanelRight className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Volume2 className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <FileText className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Users className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Settings className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Lightbulb className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Zap className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Globe className="h-4 w-4" />
+//           </Button>
+//           <Button variant="ghost" size="icon" className="h-10 w-10">
+//             <Plus className="h-4 w-4" />
+//           </Button>
+//         </div>
+//       )}
+//     </div>
+//   </div>;
+// }
