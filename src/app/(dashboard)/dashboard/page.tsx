@@ -21,20 +21,6 @@ export default function DashboardPage() {
   // Get user data from Zustand store
   const { user, isAuthenticated, accessToken, isLoading } = useAuthStore();
 
-  // Console logs to check Zustand data
-  useEffect(() => {
-    console.log("=== DASHBOARD ZUSTAND DEBUG ===");
-    console.log("User data:", user);
-    console.log("Is authenticated:", isAuthenticated);
-    console.log("Access token:", accessToken);
-    console.log("Is loading:", isLoading);
-    console.log("User email:", user?.email);
-    console.log("User username:", user?.username);
-    console.log("User full_name:", user?.full_name);
-    console.log("User payment_plan:", user?.payment_plan);
-    console.log("================================");
-  }, [user, isAuthenticated, accessToken, isLoading]);
-
   return (
     <div className="min-h-screen bg-[#222C41] text-white p-4 sm:p-6 lg:p-8">
       <div className="w-full mx-auto p-4 sm:p-8 lg:p-16">
