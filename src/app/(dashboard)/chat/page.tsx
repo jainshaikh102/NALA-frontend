@@ -24,9 +24,18 @@ import {
   Upload,
 } from "lucide-react";
 
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth-store";
+import { useGet, usePost } from "@/hooks/use-api";
 
 interface ChatMessage {
   id: number;
@@ -53,8 +62,45 @@ const ChatPage = () => {
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
   const [isAddSourceDialogOpen, setIsAddSourceDialogOpen] = useState(false);
+  const [confirmRemoveDialog, setConfirmRemoveDialog] = useState<{
+    isOpen: boolean;
+    artistName: string;
+  }>({ isOpen: false, artistName: "" });
 
   const { user } = useAuthStore();
+
+  // Fetch selected artists from API
+  const {
+    data: selectedArtistsData,
+    isLoading: isLoadingSelectedArtists,
+    refetch: refetchSelectedArtists,
+  } = useGet<string[]>(`artists/selected/${user?.username}`, {
+    enabled: !!user?.username,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Delete artist mutation (using POST to /artists/deselect)
+  const deleteArtistMutation = usePost(`artists/deselect`, {
+    onSuccess: () => {
+      refetchSelectedArtists();
+      setConfirmRemoveDialog({ isOpen: false, artistName: "" });
+    },
+    onError: (error) => {
+      console.error("Error removing artist:", error);
+    },
+  });
+
+  // Add artist mutation (using POST to /artists/select)
+  const addArtistMutation = usePost(`artists/select`, {
+    onSuccess: () => {
+      refetchSelectedArtists();
+      setTempSelectedArtists([]);
+      setIsRosterDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Error adding artists:", error);
+    },
+  });
 
   // Mock data for sources
   const sources = [
@@ -172,14 +218,15 @@ const ChatPage = () => {
     sendMessage(inputText);
   };
 
-  // Load selected artists from localStorage on component mount
+  // Update selected artists when API data changes
   React.useEffect(() => {
-    const savedArtists = localStorage.getItem("selectedArtists");
-    if (savedArtists) {
-      setSelectedArtists(JSON.parse(savedArtists));
+    if (selectedArtistsData?.length > 0) {
+      setSelectedArtists(selectedArtistsData);
+    } else {
+      setSelectedArtists([]);
     }
-  }, []);
-
+  }, [selectedArtistsData]);
+  console.log("eeeee", selectedArtistsData);
   // Fetch all artists from API
   const fetchAllArtists = async () => {
     setIsLoadingArtists(true);
@@ -231,26 +278,52 @@ const ChatPage = () => {
   };
 
   // Add selected artists to the main list
-  const handleAddSelectedArtists = () => {
+  const handleAddSelectedArtists = async () => {
     const newArtists = tempSelectedArtists.filter(
       (artist) => !selectedArtists.includes(artist)
     );
-    if (newArtists.length > 0) {
-      const updatedArtists = [...selectedArtists, ...newArtists];
-      setSelectedArtists(updatedArtists);
-      localStorage.setItem("selectedArtists", JSON.stringify(updatedArtists));
+
+    if (newArtists.length > 0 && user?.username) {
+      // Add each artist individually since API expects one artist per request
+      for (const artist of newArtists) {
+        try {
+          await addArtistMutation.mutateAsync({
+            username: user.username,
+            artist_name: artist,
+          });
+        } catch (error) {
+          console.error(`Error adding artist ${artist}:`, error);
+          // Continue with other artists even if one fails
+        }
+      }
+      // Refetch data after all additions
+      refetchSelectedArtists();
+      setTempSelectedArtists([]);
+      setIsRosterDialogOpen(false);
+    } else {
+      setTempSelectedArtists([]);
+      setIsRosterDialogOpen(false);
     }
-    setTempSelectedArtists([]);
-    setIsRosterDialogOpen(false);
   };
 
-  // Remove artist from selected list
+  // Show confirmation dialog for removing artist
   const handleRemoveArtist = (artistName: string) => {
-    const updatedArtists = selectedArtists.filter(
-      (artist) => artist !== artistName
-    );
-    setSelectedArtists(updatedArtists);
-    localStorage.setItem("selectedArtists", JSON.stringify(updatedArtists));
+    setConfirmRemoveDialog({ isOpen: true, artistName });
+  };
+
+  // Confirm artist removal
+  const handleConfirmRemoveArtist = () => {
+    if (confirmRemoveDialog.artistName && user?.username) {
+      deleteArtistMutation.mutate({
+        username: user.username,
+        artist_name: confirmRemoveDialog.artistName,
+      });
+    }
+  };
+
+  // Cancel artist removal
+  const handleCancelRemoveArtist = () => {
+    setConfirmRemoveDialog({ isOpen: false, artistName: "" });
   };
 
   // Open roster dialog and fetch artists
@@ -702,11 +775,23 @@ const ChatPage = () => {
                             <Button
                               className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
                               onClick={handleAddSelectedArtists}
-                              disabled={tempSelectedArtists.length === 0}
+                              disabled={
+                                tempSelectedArtists.length === 0 ||
+                                addArtistMutation.isPending
+                              }
                             >
-                              Add To Source{" "}
-                              {tempSelectedArtists.length > 0 &&
-                                `(${tempSelectedArtists.length})`}
+                              {addArtistMutation.isPending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Adding...
+                                </>
+                              ) : (
+                                <>
+                                  Add To Source{" "}
+                                  {tempSelectedArtists.length > 0 &&
+                                    `(${tempSelectedArtists.length})`}
+                                </>
+                              )}
                             </Button>
                           </div>
                         </div>
@@ -716,7 +801,14 @@ const ChatPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  {selectedArtists.length > 0 ? (
+                  {isLoadingSelectedArtists ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        Loading artists...
+                      </span>
+                    </div>
+                  ) : selectedArtists.length > 0 ? (
                     selectedArtists.map((artist, index) => (
                       <div
                         key={index}
@@ -730,6 +822,7 @@ const ChatPage = () => {
                           size="icon"
                           className="h-6 w-6 text-red-500 hover:text-red-700"
                           onClick={() => handleRemoveArtist(artist)}
+                          disabled={deleteArtistMutation.isPending}
                         >
                           ×
                         </Button>
@@ -936,6 +1029,45 @@ const ChatPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Remove Artist Confirmation Dialog */}
+      <Dialog
+        open={confirmRemoveDialog.isOpen}
+        onOpenChange={(open) =>
+          !open && setConfirmRemoveDialog({ isOpen: false, artistName: "" })
+        }
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remove Artist</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove{" "}
+              <span className="font-semibold">
+                {confirmRemoveDialog.artistName}
+              </span>{" "}
+              from your roster? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelRemoveArtist}
+              className="w-full sm:w-auto"
+              disabled={deleteArtistMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmRemoveArtist}
+              className="w-full sm:w-auto"
+              disabled={deleteArtistMutation.isPending}
+            >
+              {deleteArtistMutation.isPending ? "Removing..." : "Yes, Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
