@@ -92,8 +92,6 @@ export function useLogin() {
   return useMutation<{ data: LoginResponse }, ApiError, LoginRequest>({
     mutationFn: async (data: LoginRequest) => {
       try {
-        console.log("useLogin - Making request to:", "/api/auth/login");
-        console.log("useLogin - Request data:", data);
         const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: {
@@ -108,7 +106,6 @@ export function useLogin() {
         }
 
         const responseData = await response.json();
-        console.log("useLogin - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useLogin - Error:", error);
@@ -116,11 +113,9 @@ export function useLogin() {
       }
     },
     onMutate: () => {
-      console.log("Login mutation started");
       setLoading(true);
     },
     onSuccess: (response) => {
-      console.log("Login response:", response);
       const { user: backendUser, access_token } = response.data;
 
       // Transform backend user format to frontend User format
