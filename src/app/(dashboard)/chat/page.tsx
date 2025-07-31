@@ -36,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/auth-store";
 import { useGet, usePost } from "@/hooks/use-api";
+import { GoogleDriveConnector } from "@/components/sources/google-drive-connector";
 
 interface ChatMessage {
   id: number;
@@ -62,6 +63,7 @@ const ChatPage = () => {
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
   const [isAddSourceDialogOpen, setIsAddSourceDialogOpen] = useState(false);
+  const [isGoogleDriveDialogOpen, setIsGoogleDriveDialogOpen] = useState(false);
   const [confirmRemoveDialog, setConfirmRemoveDialog] = useState<{
     isOpen: boolean;
     artistName: string;
@@ -326,6 +328,13 @@ const ChatPage = () => {
     setConfirmRemoveDialog({ isOpen: false, artistName: "" });
   };
 
+  // Handle Google Drive connection
+  const handleGoogleDriveConnect = (files: any[]) => {
+    console.log("Google Drive files connected:", files);
+    // Here you can add the files to your sources
+    // For now, we'll just show a success message
+  };
+
   // Open roster dialog and fetch artists
   const handleOpenRosterDialog = () => {
     setIsRosterDialogOpen(true);
@@ -437,7 +446,13 @@ const ChatPage = () => {
                     <div className="px-8 pb-4">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Google Drive */}
-                        <div className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
+                        <div
+                          className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setIsAddSourceDialogOpen(false);
+                            setIsGoogleDriveDialogOpen(true);
+                          }}
+                        >
                           <div className="flex flex-col items-start space-y-10">
                             <h3 className="text-white font-bold text-xl">
                               Google Drive
@@ -1068,6 +1083,13 @@ const ChatPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Google Drive Connector Dialog */}
+      <GoogleDriveConnector
+        isOpen={isGoogleDriveDialogOpen}
+        onClose={() => setIsGoogleDriveDialogOpen(false)}
+        onConnect={handleGoogleDriveConnect}
+      />
     </div>
   );
 };
