@@ -124,8 +124,6 @@ export function GoogleSignInButton({
         <Button
           type="button"
           variant="outline"
-          // onClick={() => handleSocialLogin("Google")}
-
           className="flex w-full bg-card border-border hover:bg-accent"
         >
           <img

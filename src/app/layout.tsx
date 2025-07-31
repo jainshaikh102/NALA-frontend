@@ -30,6 +30,7 @@ export default function RootLayout({
           async
           defer
         ></script>
+        <script src="https://apis.google.com/js/api.js" async defer></script>
       </head>
       <body className={`${dmSans.variable} font-sans antialiased`}>
         <QueryProvider>
