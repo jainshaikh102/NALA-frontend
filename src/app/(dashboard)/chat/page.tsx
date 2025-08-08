@@ -922,9 +922,20 @@ const ChatPage = () => {
             <TabsContent value="chats" className="flex-1 overflow-auto">
               {/* All Chats Content */}
               <div className="p-4 space-y-3">
-                <h2 className="text-lg font-semibold text-foreground mb-4">
-                  Recent Chats
-                </h2>
+                <div className="flex items-center justify-between ">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Recent Chats
+                  </h2>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
                 <div className="space-y-2">
                   {recentChats.map((chat) => (
                     <div
@@ -1075,9 +1086,19 @@ const ChatPage = () => {
 
               <TabsContent value="allchats" className="flex-1 overflow-auto">
                 <div className="p-4 space-y-3">
-                  <h2 className="text-lg font-semibold text-foreground mb-4">
-                    Recent Chats
-                  </h2>
+                  <div className="flex items-center justify-between ">
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Recent Chats
+                    </h2>
+
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <div className="space-y-2">
                     {recentChats.map((chat) => (
                       <div
