@@ -11,17 +11,12 @@ import {
   MoreHorizontal,
   Send,
   Paperclip,
-  Volume2,
-  Users,
-  FileText,
-  Settings,
-  Lightbulb,
-  Zap,
-  Globe,
   PanelRight,
   Loader2,
   Info,
   Upload,
+  Mic,
+  X,
 } from "lucide-react";
 
 import {
@@ -34,9 +29,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useAuthStore } from "@/store/auth-store";
 import { useGet, usePost } from "@/hooks/use-api";
 import { GoogleDriveConnector } from "@/components/sources/google-drive-connector";
+import { Badge } from "@/components/ui/badge";
 
 interface ChatMessage {
   id: number;
@@ -50,8 +52,6 @@ interface ChatMessage {
 }
 
 const ChatPage = () => {
-  const [leftPanelOpen, setLeftPanelOpen] = useState(true);
-  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -64,10 +64,19 @@ const ChatPage = () => {
   const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
   const [isAddSourceDialogOpen, setIsAddSourceDialogOpen] = useState(false);
   const [isGoogleDriveDialogOpen, setIsGoogleDriveDialogOpen] = useState(false);
+  const [isLiveChatDialogOpen, setIsLiveChatDialogOpen] = useState(false);
+  const [selectedGenerateItem, setSelectedGenerateItem] = useState<
+    string | null
+  >(null);
   const [confirmRemoveDialog, setConfirmRemoveDialog] = useState<{
     isOpen: boolean;
     artistName: string;
   }>({ isOpen: false, artistName: "" });
+  const [confirmDeleteChatDialog, setConfirmDeleteChatDialog] = useState<{
+    isOpen: boolean;
+    chatId: number;
+    chatTitle: string;
+  }>({ isOpen: false, chatId: 0, chatTitle: "" });
 
   const { user } = useAuthStore();
 
@@ -126,12 +135,37 @@ const ChatPage = () => {
     },
   ];
 
-  // Mock data for queries
-  const queries = [
-    "What's the latest news on the music industry?",
-    "Compare the monthly earnings for all the selected artists",
-    "Which of the selected artists has more followers on Instagram?",
+  const preQuestions = [
+    { id: 1, query: "Discover Top Performing Tracks" },
+    { id: 2, query: "Music Market Trends" },
+    { id: 3, query: "Music Investment & Growth" },
+    { id: 4, query: "Find Investment Opportunities" },
+    { id: 5, query: "View Music Industry Insights" },
   ];
+
+  // Mock data for recent chats
+  const [recentChats, setRecentChats] = useState([
+    {
+      id: 1,
+      firstMessage: "Compare monthly earnings for selected artists",
+    },
+    {
+      id: 2,
+      firstMessage: "Which artist has more followers on Instagram?",
+    },
+    {
+      id: 3,
+      firstMessage: "What's the latest news on the music industry?",
+    },
+    {
+      id: 4,
+      firstMessage: "Analyze streaming performance across platforms",
+    },
+    {
+      id: 5,
+      firstMessage: "Show me the top trending songs this week",
+    },
+  ]);
 
   // API Integration
   const sendMessage = async (question: string) => {
@@ -335,6 +369,46 @@ const ChatPage = () => {
     // For now, we'll just show a success message
   };
 
+  // Handle adding generate item (only one at a time)
+  const handleAddGenerateItem = (item: string) => {
+    setSelectedGenerateItem(item);
+  };
+
+  // Handle removing generate item
+  const handleRemoveGenerateItem = () => {
+    setSelectedGenerateItem(null);
+  };
+
+  // Get icon for generate item
+  const getGenerateItemIcon = (item: string) => {
+    switch (item) {
+      case "image":
+        return "/svgs/GanerateImage-WhitIcon.svg";
+      case "video":
+        return "/svgs/GanerateVideo-WhiteIcon.svg";
+      default:
+        return "/svgs/StickwithStart-WhiteIcon.svg";
+    }
+  };
+
+  // Handle delete chat
+  const handleDeleteChat = (chatId: number) => {
+    setRecentChats((prev) => prev.filter((chat) => chat.id !== chatId));
+    setConfirmDeleteChatDialog({ isOpen: false, chatId: 0, chatTitle: "" });
+  };
+
+  // Handle chat selection
+  const handleSelectChat = (chatId: number) => {
+    // Load chat history for the selected chat
+    console.log("Load chat:", chatId);
+    // Here you would typically load the chat messages and switch to chat tab
+  };
+
+  // Handle pre-question click
+  const handlePreQuestionClick = (question: string) => {
+    setInputText(question);
+  };
+
   // Open roster dialog and fetch artists
   const handleOpenRosterDialog = () => {
     setIsRosterDialogOpen(true);
@@ -345,45 +419,37 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-screen bg-secondary flex flex-col lg:flex-row gap-2 lg:gap-4 p-2 lg:p-4 overflow-hidden">
-      {/* Left Panel - Sources, Rosters, Queries */}
-      <div
-        className={`${
-          leftPanelOpen
-            ? "w-full lg:w-60 xl:w-72 2xl:w-96 h-64 lg:h-auto"
-            : "hidden lg:block lg:w-16"
-        } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg overflow-auto scrollbar-hide flex-shrink-0`}
-      >
+    <div className="h-screen bg-secondary flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
+      {/* Desktop: Left Panel - Sources, Rosters, Queries */}
+      <div className="hidden lg:block w-80 transition-all duration-300 ease-in-out bg-background border border-border rounded-lg overflow-auto scrollbar-hide flex-shrink-0">
         <div className="h-full flex flex-col">
-          {leftPanelOpen ? (
-            <>
-              {/* Mobile Close Button */}
-              <div className="lg:hidden p-2 border-b border-border">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setLeftPanelOpen(false)}
-                  className="h-8 w-8 ml-auto"
-                >
-                  ×
-                </Button>
-              </div>
+          {/* Header */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold text-foreground">Source</h1>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <PanelRight className="h-6 w-6" />
+              </Button>
+            </div>
+          </div>
 
-              {/* Sources Section */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Sources
-                  </h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setLeftPanelOpen(false)}
-                    className="h-8 w-8"
-                  >
-                    <PanelRight className="h-4 w-4" />
-                  </Button>
-                </div>
+          {/* Tabs */}
+          <Tabs defaultValue="sources" className="flex-1 flex flex-col">
+            <div className="px-4 pt-4">
+              <TabsList className="w-full">
+                <TabsTrigger value="sources" className="flex-1">
+                  Sources
+                </TabsTrigger>
+                <TabsTrigger value="chats" className="flex-1">
+                  All Chats
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="sources" className="flex-1 overflow-auto">
+              {/* Sources Content */}
+
+              <div className="p-4 space-y-3">
                 <Dialog
                   open={isAddSourceDialogOpen}
                   onOpenChange={setIsAddSourceDialogOpen}
@@ -394,7 +460,7 @@ const ChatPage = () => {
                       ADD SOURCE
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="w-full max-w-5xl sm:max-w-5xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+                  <DialogContent className="w-full max-w-full lg:max-w-6xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl scrollbar-hide">
                     {/* Header with Bot Lion */}
                     <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
                       <Image
@@ -444,7 +510,7 @@ const ChatPage = () => {
 
                     {/* Source Options */}
                     <div className="px-8 pb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-3 gap-6">
                         {/* Google Drive */}
                         <div
                           className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer"
@@ -602,7 +668,7 @@ const ChatPage = () => {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="w-full max-w-2xl sm:max-w-2xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+                    <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
                       {/* Header with Bot Lion */}
                       <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
                         <Image
@@ -851,118 +917,421 @@ const ChatPage = () => {
                   )}
                 </div>
               </div>
+            </TabsContent>
 
-              {/* Queries Section */}
-              <div className="p-4 border-b border-border">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Queries{" "}
-                    <span className="text-sm text-muted-foreground">(5+)</span>
-                  </h2>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-6 w-6 rounded-full bg-secondary border-solid border-[1px] border-[#ffffff]/50"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  {queries.slice(0, 2).map((query, index) => (
-                    <div
-                      key={index}
-                      className="p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer"
-                    >
-                      <span className="text-sm text-foreground">{query}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* FAQ Section */}
-              <div className="flex-1 p-4 ">
+            <TabsContent value="chats" className="flex-1 overflow-auto">
+              {/* All Chats Content */}
+              <div className="p-4 space-y-3">
                 <h2 className="text-lg font-semibold text-foreground mb-4">
-                  Frequently Asked Questions
+                  Recent Chats
                 </h2>
-                <div className="space-y-2 bg-[#707070]/30 rounded-lg">
-                  {queries.map((query, index) => (
+                <div className="space-y-2">
+                  {recentChats.map((chat) => (
                     <div
-                      key={index}
-                      className="flex items-start  space-x-2 p-2 hover:bg-secondary/30 rounded transition-colors cursor-pointer"
+                      key={chat.id}
+                      className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group"
+                      onClick={() => handleSelectChat(chat.id)}
                     >
-                      <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-sm text-foreground">{query}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground truncate">
+                          {chat.firstMessage}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 "
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteChatDialog({
+                            isOpen: true,
+                            chatId: chat.id,
+                            chatTitle: chat.firstMessage,
+                          });
+                        }}
+                      >
+                        <X className="h-3 w-3 text-white" />
+                      </Button>
                     </div>
                   ))}
                 </div>
               </div>
-            </>
-          ) : (
-            <div className="h-full flex flex-col items-center py-4 space-y-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLeftPanelOpen(true)}
-                className="h-10 w-10"
-              >
-                <PanelRight className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
-                <Plus className="h-4 w-4" />
-              </Button>
-              {sources.slice(0, 3).map((source) => (
-                <Button
-                  key={source.id}
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10"
-                >
-                  <Image
-                    src={source.icon}
-                    alt={source.name}
-                    width={16}
-                    height={16}
-                    className="opacity-70"
-                  />
-                </Button>
-              ))}
-            </div>
-          )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
 
-      {/* Center Panel - Chat */}
-      <div className="flex-1 flex flex-col bg-background border border-border rounded-lg overflow-hidden min-w-0 w-full lg:w-auto">
+      {/* Mobile/Tablet: Combined Container with Tabs */}
+      <div className="flex-1 lg:hidden flex flex-col bg-background border border-border rounded-lg overflow-hidden">
+        <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+          <div className="p-4 border-b border-border">
+            <TabsList className="w-full">
+              <TabsTrigger value="sources" className="flex-1">
+                Sources
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="flex-1">
+                Chat
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="sources" className="flex-1 overflow-auto">
+            {/* Mobile Sources Content with Nested Tabs */}
+            <Tabs defaultValue="sources" className="flex-1 flex flex-col">
+              <div className="p-4 border-b border-border">
+                <TabsList className="w-full">
+                  <TabsTrigger value="sources" className="flex-1">
+                    Source
+                  </TabsTrigger>
+                  <TabsTrigger value="allchats" className="flex-1">
+                    All Chats
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="sources" className="flex-1 overflow-auto">
+                <div className="p-4 space-y-3">
+                  <Dialog
+                    open={isAddSourceDialogOpen}
+                    onOpenChange={setIsAddSourceDialogOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button className="w-full bg-[secondary] hover:bg-primary/90 text-primary-foreground border-solid border-[1px] border-[#ffffff]/50 rounded-full">
+                        <Plus className="h-4 w-4 mr-2" />
+                        ADD SOURCE
+                      </Button>
+                    </DialogTrigger>
+                    {/* Add Source Dialog Content - Same as desktop */}
+                    <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+                      <div className="relative">
+                        <div className="sticky top-0 bg-[#222C41] z-10 px-8 py-6 border-b border-[#ffffff]/10">
+                          <h2 className="text-2xl font-bold text-white text-center">
+                            Add Source
+                          </h2>
+                        </div>
+
+                        {/* Source Options */}
+                        <div className="px-8 pb-4">
+                          <div className="grid grid-cols-3 gap-6">
+                            {sources.map((source) => (
+                              <div
+                                key={source.id}
+                                className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
+                                onClick={() => {
+                                  if (source.name === "Google Drive") {
+                                    setIsAddSourceDialogOpen(false);
+                                    setIsGoogleDriveDialogOpen(true);
+                                  }
+                                }}
+                              >
+                                <Image
+                                  src={source.icon}
+                                  alt={source.name}
+                                  width={48}
+                                  height={48}
+                                  className="mb-4"
+                                />
+                                <h3 className="text-white font-medium text-center">
+                                  {source.name}
+                                </h3>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Sources List */}
+                  <div className="space-y-2">
+                    {sources.map((source) => (
+                      <div
+                        key={source.id}
+                        className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Image
+                            src={source.icon}
+                            alt={source.name}
+                            width={20}
+                            height={20}
+                          />
+                          <span className="text-sm font-medium text-foreground">
+                            {source.name}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="allchats" className="flex-1 overflow-auto">
+                <div className="p-4 space-y-3">
+                  <h2 className="text-lg font-semibold text-foreground mb-4">
+                    Recent Chats
+                  </h2>
+                  <div className="space-y-2">
+                    {recentChats.map((chat) => (
+                      <div
+                        key={chat.id}
+                        className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group"
+                        onClick={() => handleSelectChat(chat.id)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">
+                            {chat.firstMessage}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteChatDialog({
+                              isOpen: true,
+                              chatId: chat.id,
+                              chatTitle: chat.firstMessage,
+                            });
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="chat" className="flex-1 flex flex-col">
+            {/* Mobile Chat Content */}
+            <div className="flex-1 overflow-auto p-4 relative">
+              <div className="space-y-4">
+                {messages.map((message, index) => (
+                  <div key={index} className="space-y-2">
+                    {message.type === "user" ? (
+                      <div className="flex justify-end">
+                        <div className="max-w-[80%] bg-primary text-primary-foreground rounded-lg p-3">
+                          <p className="text-sm">{message.content}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-start">
+                        <div className="max-w-[80%] bg-muted rounded-lg p-3">
+                          <ResponseRenderer
+                            answerStr={message.content}
+                            displayData={message.displayData}
+                            dataType={message.dataType || "text"}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {/* Pre-question badges - show only when chat is empty */}
+              {messages.length === 0 && (
+                <div className="absolute bottom-28 left-0 h-20 flex items-center justify-center w-full p-8">
+                  <div className="flex items-center justify-center flex-wrap gap-6">
+                    {preQuestions.map((question) => (
+                      <Badge
+                        key={question.id}
+                        className="bg-secondary rounded-full px-4 py-2 cursor-pointer hover:bg-secondary/80 transition-colors"
+                        onClick={() => handlePreQuestionClick(question.query)}
+                      >
+                        {question.query}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile Chat Input */}
+            <div className="p-4 border-t border-border">
+              <div className="relative w-full">
+                <form onSubmit={handleSubmit} className="w-full">
+                  <div className="flex w-full items-center space-x-2 border-[1px] border-[#FFFFFF4D] rounded-xl p-3">
+                    {/* Left side buttons */}
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        type="button"
+                        onClick={() => setIsAddSourceDialogOpen(true)}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </Button>
+
+                      {/* StickWithStart Icon with Popover OR Selected Item Badge */}
+                      {selectedGenerateItem ? (
+                        // Show badge when item is selected
+                        <div className="flex items-center space-x-2 bg-secondary/50 border border-border rounded-full px-3 py-1.5">
+                          <Image
+                            src={getGenerateItemIcon(selectedGenerateItem)}
+                            alt={selectedGenerateItem}
+                            width={14}
+                            height={14}
+                          />
+                          <span className="text-sm text-foreground capitalize">
+                            {selectedGenerateItem}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-4 w-4 p-0 hover:bg-destructive/20"
+                            onClick={handleRemoveGenerateItem}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        // Show popover when no item is selected
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              type="button"
+                            >
+                              <Image
+                                src="/svgs/StickwithStart-WhiteIcon.svg"
+                                alt="Generate Options"
+                                width={16}
+                                height={16}
+                              />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-48 p-2"
+                            align="start"
+                            side="top"
+                          >
+                            <div className="space-y-1">
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start h-10 px-3"
+                                onClick={() => {
+                                  handleAddGenerateItem("image");
+                                }}
+                              >
+                                <Image
+                                  src="/svgs/GanerateImage-WhitIcon.svg"
+                                  alt="Generate Image"
+                                  width={16}
+                                  height={16}
+                                  className="mr-3"
+                                />
+                                Generate Image
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start h-10 px-3"
+                                onClick={() => {
+                                  handleAddGenerateItem("video");
+                                }}
+                              >
+                                <Image
+                                  src="/svgs/GanerateVideo-WhiteIcon.svg"
+                                  alt="Generate Video"
+                                  width={16}
+                                  height={16}
+                                  className="mr-3"
+                                />
+                                Generate Video
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
+
+                    <input
+                      type="text"
+                      placeholder="Ask or search anything..."
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      disabled={isLoading}
+                      className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                    />
+
+                    {/* Right side buttons */}
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        type="button"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </Button>
+
+                      {/* Conditional button - Live Chat or Send */}
+                      {inputText.trim() ? (
+                        <Button
+                          type="submit"
+                          size="icon"
+                          disabled={isLoading}
+                          className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {isLoading ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          type="button"
+                          onClick={() => setIsLiveChatDialogOpen(true)}
+                        >
+                          <Image
+                            src="/svgs/AudioImage.svg"
+                            alt="Live Chat"
+                            width={16}
+                            height={16}
+                          />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {/* Desktop: Center Panel - Chat */}
+
+      {/* Desktop: Center Panel - Chat */}
+      <div className="hidden lg:flex flex-1 flex-col bg-background border border-border rounded-lg overflow-hidden min-w-0">
         {/* Chat Header */}
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              {/* Mobile Menu Buttons */}
-              <div className="flex lg:hidden space-x-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setLeftPanelOpen(!leftPanelOpen)}
-                  className="h-8 w-8"
-                >
-                  <PanelRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setRightPanelOpen(!rightPanelOpen)}
-                  className="h-8 w-8"
-                >
-                  <PanelRight className="h-4 w-4" />
-                </Button>
-              </div>
               <h1 className="text-xl font-semibold text-foreground">Chat</h1>
             </div>
           </div>
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
           {messages.map((message) => (
             <div
               key={message.id}
@@ -1003,6 +1372,23 @@ const ChatPage = () => {
               )}
             </div>
           ))}
+
+          {/* Pre-question badges - show only when chat is empty */}
+          {messages.length === 0 && (
+            <div className="absolute bottom-20 left-0 h-20 flex items-center justify-center w-full p-8">
+              <div className="flex items-center justify-center flex-wrap gap-6">
+                {preQuestions.map((question) => (
+                  <Badge
+                    key={question.id}
+                    className="bg-secondary rounded-full px-4 py-2 cursor-pointer hover:bg-secondary/80 transition-colors"
+                    onClick={() => handlePreQuestionClick(question.query)}
+                  >
+                    {question.query}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Chat Models Selection */}
@@ -1010,35 +1396,156 @@ const ChatPage = () => {
           {/* Chat Input */}
           <div className="relative">
             <form onSubmit={handleSubmit}>
-              <div className="flex items-center space-x-2 bg-secondary rounded-lg p-3">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  type="button"
-                >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
+              <div className="flex w-full items-center flex-col space-x-2 border-[1px] border-[#FFFFFF4D] rounded-xl p-3">
+                {/* Left side buttons */}
                 <input
                   type="text"
                   placeholder="Ask or search anything..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   disabled={isLoading}
-                  className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                  className="flex-1 bg-transparent w-full p-2 border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                 />
-                <Button
-                  type="submit"
-                  size="icon"
-                  disabled={isLoading || !inputText.trim()}
-                  className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
+                <div className="flex items-center justify-between w-full space-x-2">
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      type="button"
+                      onClick={() => setIsAddSourceDialogOpen(true)}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+
+                    {/* StickWithStart Icon with Popover OR Selected Item Badge */}
+                    {selectedGenerateItem ? (
+                      // Show badge when item is selected
+                      <div className="flex items-center space-x-2 bg-secondary/50 border border-border rounded-full px-3 py-1.5">
+                        <Image
+                          src={getGenerateItemIcon(selectedGenerateItem)}
+                          alt={selectedGenerateItem}
+                          width={14}
+                          height={14}
+                        />
+                        <span className="text-sm text-foreground capitalize">
+                          {selectedGenerateItem}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 p-0 hover:bg-destructive/20"
+                          onClick={handleRemoveGenerateItem}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      // Show popover when no item is selected
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            type="button"
+                          >
+                            <Image
+                              src="/svgs/StickwithStart-WhiteIcon.svg"
+                              alt="Generate Options"
+                              width={16}
+                              height={16}
+                            />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="w-48 p-2"
+                          align="start"
+                          side="top"
+                        >
+                          <div className="space-y-1">
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start h-10 px-3"
+                              onClick={() => {
+                                handleAddGenerateItem("image");
+                              }}
+                            >
+                              <Image
+                                src="/svgs/GanerateImage-WhitIcon.svg"
+                                alt="Generate Image"
+                                width={16}
+                                height={16}
+                                className="mr-3"
+                              />
+                              Generate Image
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start h-10 px-3"
+                              onClick={() => {
+                                handleAddGenerateItem("video");
+                              }}
+                            >
+                              <Image
+                                src="/svgs/GanerateVideo-WhiteIcon.svg"
+                                alt="Generate Video"
+                                width={16}
+                                height={16}
+                                className="mr-3"
+                              />
+                              Generate Video
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                  {/* Selected Generate Items Badges */}
+
+                  {/* Right side buttons */}
+                  <div className="flex items-center space-x-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      type="button"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </Button>
+
+                    {/* Conditional button - Live Chat or Send */}
+                    {inputText.trim() ? (
+                      <Button
+                        type="submit"
+                        size="icon"
+                        disabled={isLoading}
+                        className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Send className="h-4 w-4" />
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        type="button"
+                        onClick={() => setIsLiveChatDialogOpen(true)}
+                      >
+                        <Image
+                          src="/svgs/SpeakIcon.svg"
+                          alt="Live Chat"
+                          width={16}
+                          height={16}
+                        />
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </div>
             </form>
           </div>
@@ -1052,7 +1559,7 @@ const ChatPage = () => {
           !open && setConfirmRemoveDialog({ isOpen: false, artistName: "" })
         }
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Remove Artist</DialogTitle>
             <DialogDescription>
@@ -1063,11 +1570,10 @@ const ChatPage = () => {
               from your roster? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <DialogFooter className="flex justify-end gap-2">
             <Button
               variant="outline"
               onClick={handleCancelRemoveArtist}
-              className="w-full sm:w-auto"
               disabled={deleteArtistMutation.isPending}
             >
               Cancel
@@ -1075,7 +1581,6 @@ const ChatPage = () => {
             <Button
               variant="destructive"
               onClick={handleConfirmRemoveArtist}
-              className="w-full sm:w-auto"
               disabled={deleteArtistMutation.isPending}
             >
               {deleteArtistMutation.isPending ? "Removing..." : "Yes, Remove"}
@@ -1090,240 +1595,123 @@ const ChatPage = () => {
         onClose={() => setIsGoogleDriveDialogOpen(false)}
         onConnect={handleGoogleDriveConnect}
       />
+
+      {/* Live Chat Dialog */}
+      <Dialog
+        open={isLiveChatDialogOpen}
+        onOpenChange={setIsLiveChatDialogOpen}
+      >
+        <DialogContent className="max-w-full max-h-full w-screen h-[80vh] p-0 border-none bg-gradient-to-b from-[#2A3441] to-[#1A2332]">
+          <div className="flex flex-col items-center justify-center h-full relative">
+            {/* Close button */}
+            {/* <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-6 right-6 h-12 w-12 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
+              onClick={() => setIsLiveChatDialogOpen(false)}
+            >
+              <X className="h-6 w-6" />
+            </Button> */}
+
+            {/* Bot Lion Image */}
+            <div className="mb-8">
+              <Image
+                src="/svgs/Bot-Lion.svg"
+                alt="Bot Lion"
+                width={200}
+                height={200}
+                className="object-contain"
+              />
+            </div>
+
+            {/* Audio Visualization */}
+            <div className="mb-8">
+              <Image
+                src="/svgs/AudioImage.svg"
+                alt="Audio Visualization"
+                width={300}
+                height={80}
+                className="object-contain"
+              />
+            </div>
+
+            {/* Response Text */}
+            <div className="mb-12 text-center max-w-md">
+              <p className="text-white text-lg">
+                I have generated the comprehensive valuation report for Cailboy
+              </p>
+            </div>
+
+            {/* Control Buttons */}
+            <div className="flex items-center space-x-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-16 w-16 rounded-full bg-[#E53E3E] hover:bg-[#C53030] text-white"
+              >
+                <Mic className="h-8 w-8" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-16 w-16 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
+                onClick={() => setIsLiveChatDialogOpen(false)}
+              >
+                <X className="h-8 w-8" />
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Chat Confirmation Dialog */}
+      <Dialog
+        open={confirmDeleteChatDialog.isOpen}
+        onOpenChange={(open) =>
+          !open &&
+          setConfirmDeleteChatDialog({
+            isOpen: false,
+            chatId: 0,
+            chatTitle: "",
+          })
+        }
+      >
+        <DialogContent className="max-w-md">
+          <div className="p-6">
+            {/* <h2 className="text-lg font-semibold text-foreground mb-4">
+              Delete Chat
+            </h2> */}
+            <p className="text-sm text-muted-foreground mb-6">
+              Are you sure you want to delete this chat?
+            </p>
+
+            <div className="flex space-x-3">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  setConfirmDeleteChatDialog({
+                    isOpen: false,
+                    chatId: 0,
+                    chatTitle: "",
+                  })
+                }
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => handleDeleteChat(confirmDeleteChatDialog.chatId)}
+                className="flex-1"
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default ChatPage;
-
-// {
-//   {
-//     /* Right Panel - Studio/Note */
-//   }
-//   <div
-//     className={`${
-//       rightPanelOpen
-//         ? "w-full lg:w-60 xl:w-72 2xl:w-96 h-64 lg:h-auto"
-//         : "hidden lg:block lg:w-16"
-//     } transition-all duration-300 ease-in-out bg-background border border-border rounded-lg flex-shrink-0`}
-//   >
-//     <div className="h-full flex flex-col">
-//       {rightPanelOpen ? (
-//         <div className="h-full overflow-y-auto">
-//           {/* Mobile Close Button */}
-//           <div className="lg:hidden p-2 border-b border-border">
-//             <Button
-//               variant="ghost"
-//               size="icon"
-//               onClick={() => setRightPanelOpen(false)}
-//               className="h-8 w-8 ml-auto"
-//             >
-//               ×
-//             </Button>
-//           </div>
-
-//           {/* Studio Section */}
-//           <div className="p-4 border-b border-border">
-//             <div className="flex items-center justify-between mb-3">
-//               <h2 className="text-lg font-semibold text-foreground">Studio</h2>
-//               <Button
-//                 variant="ghost"
-//                 size="icon"
-//                 onClick={() => setRightPanelOpen(false)}
-//                 className="h-6 w-6 hidden lg:block"
-//               >
-//                 <PanelRight className="h-4 w-4" />
-//               </Button>
-//             </div>
-//           </div>
-
-//           {/* Audio Section */}
-//           <div className="p-4 border-b border-border">
-//             <div className="flex items-center justify-between mb-3">
-//               <h2 className="text-lg font-semibold text-foreground">Audio</h2>
-//               <Button variant="ghost" size="icon" className="h-6 w-6">
-//                 <Info className="h-4 w-4" />
-//               </Button>
-//             </div>
-//             <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
-//               <div className="flex items-center gap-2">
-//                 <Button
-//                   variant={"ghost"}
-//                   size={"icon"}
-//                   className="bg-[#FFFFFF4D] rounded-full"
-//                 >
-//                   {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
-//                   <Image
-//                     src={"/svgs/Speaker-WhiteIcon.svg"}
-//                     alt="Google Drive"
-//                     width={16}
-//                     height={16}
-//                   />
-//                 </Button>
-//                 <span className="text-[14px] text-muted-foreground">
-//                   Deep Dive Conversation
-//                 </span>
-//               </div>
-
-//               <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
-//                 Generate
-//               </Button>
-//             </div>
-//           </div>
-
-//           {/* Video Section */}
-//           <div className="p-4 border-b border-border">
-//             <div className="flex items-center justify-between mb-3">
-//               <h2 className="text-lg font-semibold text-foreground">Video</h2>
-//               <Button variant="ghost" size="icon" className="h-6 w-6">
-//                 <Info className="h-4 w-4" />
-//               </Button>
-//             </div>
-//             <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
-//               <div className="flex items-center gap-2">
-//                 <Button
-//                   variant={"ghost"}
-//                   size={"icon"}
-//                   className="bg-[#FFFFFF4D] rounded-full"
-//                 >
-//                   {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
-//                   <Image
-//                     src={"/svgs/Video-WhiteIcon.svg"}
-//                     alt="Google Drive"
-//                     width={16}
-//                     height={16}
-//                   />
-//                 </Button>
-//                 <span className="text-[14px] text-muted-foreground">
-//                   Deep Dive Conversation
-//                 </span>
-//               </div>
-
-//               <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
-//                 Generate
-//               </Button>
-//             </div>
-//           </div>
-
-//           {/* Image Section */}
-//           <div className="p-4 border-b border-border">
-//             <div className="flex items-center justify-between mb-3">
-//               <h2 className="text-lg font-semibold text-foreground">Image</h2>
-//               <Button variant="ghost" size="icon" className="h-6 w-6">
-//                 <Info className="h-4 w-4" />
-//               </Button>
-//             </div>
-//             <div className="flex items-start flex-col space-y-2 mb-3 bg-[#222c41] p-3 rounded-lg">
-//               <div className="flex items-center gap-2">
-//                 <Button
-//                   variant={"ghost"}
-//                   size={"icon"}
-//                   className="bg-[#FFFFFF4D] rounded-full"
-//                 >
-//                   {/* <Volume2 className="h-4 w-4 text-blue-400" /> */}
-//                   <Image
-//                     src={"/svgs/Image-WhiteIcon.svg"}
-//                     alt="Google Drive"
-//                     width={16}
-//                     height={16}
-//                   />
-//                 </Button>
-//                 <span className="text-[14px] text-muted-foreground">
-//                   Deep Dive Conversation
-//                 </span>
-//               </div>
-
-//               <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground rounded-full">
-//                 Generate
-//               </Button>
-//             </div>
-//           </div>
-
-//           {/* Notes Section */}
-//           <div className="p-4">
-//             <div className="flex items-center justify-between mb-3">
-//               <h2 className="text-lg font-semibold text-foreground">Notes</h2>
-//               <Button variant="ghost" size="icon" className="h-6 w-6">
-//                 <Info className="h-4 w-4" />
-//               </Button>
-//             </div>
-
-//             {/* Add Note Button */}
-//             <Button className="w-full bg-secondary hover:bg-secondary/80 text-foreground mb-4 justify-center">
-//               <Plus className="h-4 w-4 mr-2" />
-//               Add Note
-//             </Button>
-
-//             {/* Notes List */}
-//             <div className="space-y-3">
-//               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-//                 <div className="flex items-center space-x-3">
-//                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-//                   <span className="text-sm text-foreground">Note 1</span>
-//                 </div>
-//                 <Button variant="ghost" size="icon" className="h-6 w-6">
-//                   <MoreHorizontal className="h-4 w-4" />
-//                 </Button>
-//               </div>
-
-//               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-//                 <div className="flex items-center space-x-3">
-//                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-//                   <span className="text-sm text-foreground">Note 1</span>
-//                 </div>
-//                 <Button variant="ghost" size="icon" className="h-6 w-6">
-//                   <MoreHorizontal className="h-4 w-4" />
-//                 </Button>
-//               </div>
-
-//               <div className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg">
-//                 <div className="flex items-center space-x-3">
-//                   <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
-//                   <span className="text-sm text-foreground">Note 1</span>
-//                 </div>
-//                 <Button variant="ghost" size="icon" className="h-6 w-6">
-//                   <MoreHorizontal className="h-4 w-4" />
-//                 </Button>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       ) : (
-//         <div className="h-full flex flex-col items-center py-4 space-y-4">
-//           <Button
-//             variant="ghost"
-//             size="icon"
-//             onClick={() => setRightPanelOpen(true)}
-//             className="h-10 w-10"
-//           >
-//             <PanelRight className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Volume2 className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <FileText className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Users className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Settings className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Lightbulb className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Zap className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Globe className="h-4 w-4" />
-//           </Button>
-//           <Button variant="ghost" size="icon" className="h-10 w-10">
-//             <Plus className="h-4 w-4" />
-//           </Button>
-//         </div>
-//       )}
-//     </div>
-//   </div>;
-// }
