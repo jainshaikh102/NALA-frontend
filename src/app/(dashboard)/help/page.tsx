@@ -31,32 +31,29 @@ export default function HelpPage() {
 
       <div className="w-full p-4 sm:p-6 lg:p-8 bg-background rounded-3xl lg:rounded-t-none lg:rounded-b-3xl min-h-[80vh]">
         <div className="">
-          <div className="bg-[#222C41] rounded-lg p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
+          <div className="bg-[#222C41] w-3/4 rounded-lg p-6 sm:p-8 lg:p-10 space-y-6 sm:space-y-8">
             {/* Header */}
             <div className="text-center sm:text-left">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
                 Need Help
               </h1>
             </div>
-
             {/* Bot Lion Image - Responsive sizing */}
-            <div className="flex items-center justify-center py-4 sm:py-6">
+            <div className="flex items-center justify-center ">
               <Image
                 src="/svgs/Bot-Lion.svg"
                 alt="Help Character"
-                width={200}
-                height={200}
+                width={150}
+                height={150}
                 className="object-contain w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48"
               />
             </div>
-
             {/* Subtitle */}
             <div className="text-center">
               <h2 className="text-lg sm:text-xl lg:text-2xl text-foreground font-medium">
                 How can we help?
               </h2>
             </div>
-
             {/* Help Form */}
             <div className="space-y-4 sm:space-y-6">
               {/* Form Label */}

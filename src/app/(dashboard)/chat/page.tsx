@@ -460,7 +460,7 @@ const ChatPage = () => {
                       ADD SOURCE
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="w-full max-w-full lg:max-w-6xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl scrollbar-hide">
+                  <DialogContent className="w-full max-w-full lg:max-w-5xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl scrollbar-hide">
                     {/* Header with Bot Lion */}
                     <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
                       <Image
@@ -510,7 +510,7 @@ const ChatPage = () => {
 
                     {/* Source Options */}
                     <div className="px-8 pb-4">
-                      <div className="grid grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Google Drive */}
                         <div
                           className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer"
@@ -539,7 +539,7 @@ const ChatPage = () => {
                                 className="opacity-50 hover:opacity-100"
                               />
                               <Image
-                                src="/Cloud-WhiteIcon.png"
+                                src="/svgs/Cloud-WhiteIcon.svg"
                                 alt="Dropbox"
                                 width={60}
                                 height={60}
@@ -584,15 +584,6 @@ const ChatPage = () => {
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Button */}
-                    <div className="px-8 pb-8">
-                      <div className="px-8 p-8 bg-[#151E31] rounded-lg flex items-center justify-center">
-                        <Button className="w-full max-w-lg bg-[#E55351] hover:bg-[#E55351]/90 text-white py-3 rounded-full font-medium">
-                          Spotlight Roster
-                        </Button>
                       </div>
                     </div>
                   </DialogContent>
@@ -1341,14 +1332,27 @@ const ChatPage = () => {
       {/* Desktop: Center Panel - Chat */}
 
       {/* Desktop: Center Panel - Chat */}
-      <div className="hidden lg:flex flex-1 flex-col bg-background border border-border rounded-lg overflow-hidden min-w-0">
+      <div className="hidden lg:flex flex-1 flex-col bg-background border border-border rounded-lg  overflow-hidden min-w-0">
         {/* Chat Header */}
-        <div className="p-4 border-b border-border">
+        {/* <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-semibold text-foreground">Chat</h1>
             </div>
           </div>
+        </div> */}
+        <div className="flex items-center justify-center flex-col relative overflow-hidden bg-transparent rounded-t-lg">
+          <h3 className="absolute top-1/2 left-12 transform -translate-x-1/2 -translate-y-1/2 text-xl font-semibold text-foreground">
+            Chat
+          </h3>
+          <Image
+            src="/svgs/Bot-Lion.svg"
+            alt="Bot Lion"
+            width={110}
+            height={100}
+            className="object-contain absolute -top-1"
+          />
+          <Separator className="mt-15 z-50" />
         </div>
 
         {/* Chat Messages */}
