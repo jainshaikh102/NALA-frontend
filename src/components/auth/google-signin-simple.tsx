@@ -29,8 +29,6 @@ export function GoogleSignInSimple({
   useEffect(() => {
     // Create global callback function
     window.handleGoogleSignIn = (response: any) => {
-      console.log("Google Sign-In Response:", response);
-
       if (response.credential) {
         googleLoginMutation.mutate(
           { credential: response.credential },
@@ -57,14 +55,7 @@ export function GoogleSignInSimple({
 
     const initializeGoogle = () => {
       retryCount++;
-      console.log(
-        `Checking for Google Identity Services... (attempt ${retryCount})`
-      );
-
       if (typeof window !== "undefined" && window.google) {
-        console.log("✅ Google Identity Services loaded successfully");
-        console.log("Google object:", window.google);
-
         // Try to initialize Google Sign-In
         if (clientId) {
           try {
@@ -72,19 +63,18 @@ export function GoogleSignInSimple({
               client_id: clientId,
               callback: window.handleGoogleSignIn,
             });
-            console.log("✅ Google Sign-In initialized successfully");
           } catch (error) {
-            console.error("❌ Failed to initialize Google Sign-In:", error);
+            console.error("Failed to initialize Google Sign-In:", error);
           }
         } else {
-          console.error("❌ Google Client ID not found");
+          console.error("Google Client ID not found");
         }
       } else if (retryCount < maxRetries) {
         // Retry after a short delay
         setTimeout(initializeGoogle, 100);
       } else {
         console.error(
-          "❌ Google Identity Services failed to load after 5 seconds"
+          "Google Identity Services failed to load after 5 seconds"
         );
         onError?.("Google Sign-In failed to load");
       }
@@ -162,7 +152,6 @@ export function GoogleSignInSimple({
             }
 
             // Method 2: Try using Google's prompt method
-            console.log("Google button not found, trying prompt method");
             if (window.google.accounts?.id?.prompt) {
               try {
                 console.log("Calling Google prompt...");

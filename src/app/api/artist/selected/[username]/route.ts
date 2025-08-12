@@ -8,28 +8,19 @@ export async function GET(
 ) {
   try {
     const { username } = params;
-    console.log("Selected Artists API route - GET - Username:", username);
-    console.log("Selected Artists API route - API_BASE_URL:", API_BASE_URL);
-
     const response = await fetch(`${API_BASE_URL}/artist/selected/${username}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
-
-    console.log("Selected Artists API route - GET - Response status:", response.status);
-
     const data = await response.json();
-    console.log("Selected Artists API route - GET - Response data:", data);
-
     if (!response.ok) {
       return NextResponse.json(
         { error: data.message || "Failed to fetch selected artists" },
         { status: response.status }
       );
     }
-
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("Selected Artists API route - GET - Error:", error);
@@ -47,10 +38,6 @@ export async function DELETE(
   try {
     const { username } = params;
     const body = await request.json();
-    console.log("Selected Artists API route - DELETE - Username:", username);
-    console.log("Selected Artists API route - DELETE - Body:", body);
-    console.log("Selected Artists API route - API_BASE_URL:", API_BASE_URL);
-
     const response = await fetch(`${API_BASE_URL}/artist/selected/${username}`, {
       method: "DELETE",
       headers: {
@@ -58,12 +45,7 @@ export async function DELETE(
       },
       body: JSON.stringify(body),
     });
-
-    console.log("Selected Artists API route - DELETE - Response status:", response.status);
-
     const data = await response.json();
-    console.log("Selected Artists API route - DELETE - Response data:", data);
-
     if (!response.ok) {
       return NextResponse.json(
         { error: data.message || "Failed to remove artist" },
@@ -88,10 +70,6 @@ export async function POST(
   try {
     const { username } = params;
     const body = await request.json();
-    console.log("Selected Artists API route - POST - Username:", username);
-    console.log("Selected Artists API route - POST - Body:", body);
-    console.log("Selected Artists API route - API_BASE_URL:", API_BASE_URL);
-
     const response = await fetch(`${API_BASE_URL}/artist/selected/${username}`, {
       method: "POST",
       headers: {
@@ -99,12 +77,7 @@ export async function POST(
       },
       body: JSON.stringify(body),
     });
-
-    console.log("Selected Artists API route - POST - Response status:", response.status);
-
     const data = await response.json();
-    console.log("Selected Artists API route - POST - Response data:", data);
-
     if (!response.ok) {
       return NextResponse.json(
         { error: data.message || "Failed to add artist" },

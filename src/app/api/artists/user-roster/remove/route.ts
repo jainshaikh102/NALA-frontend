@@ -4,8 +4,17 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://backend.na
 
 export async function POST(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const username = searchParams.get('username');
     const body = await request.json();
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    if (!username) {
+      return NextResponse.json(
+        { error: "Username is required" },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(`${API_BASE_URL}/artists/user_roster/remove?username=${username}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -15,13 +24,14 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.message || "Token refresh failed" },
+        { error: data.message || data.detail || "Failed to remove artist from roster" },
         { status: response.status }
       );
     }
+
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
-    console.error("Refresh Token API route - Error:", error);
+    console.error("Remove Artist API route - POST - Error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
