@@ -83,7 +83,6 @@ export default function PaymentPage() {
         }
 
         toast.success("Welcome to NALA! Your free plan is now active.");
-        console.log("Free plan activated successfully");
       } catch (error) {
         const errorMessage =
           error instanceof Error

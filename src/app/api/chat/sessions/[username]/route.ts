@@ -8,28 +8,19 @@ export async function GET(
 ) {
   try {
     const { username } = params;
-    console.log("Get Sessions API route - GET - Username:", username);
-    console.log("Get Sessions API route - API_BASE_URL:", API_BASE_URL);
-
     const response = await fetch(`${API_BASE_URL}/chat/sessions/${username}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
     });
-
-    console.log("Get Sessions API route - GET - Response status:", response.status);
-
     const data = await response.json();
-    console.log("Get Sessions API route - GET - Response data:", data);
-
     if (!response.ok) {
       return NextResponse.json(
         { error: data.message || data.detail || "Failed to fetch chat sessions" },
         { status: response.status }
       );
     }
-
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("Get Sessions API route - GET - Error:", error);
