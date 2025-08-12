@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,11 +16,11 @@ import {
   ChevronRight,
   Users,
   Eye,
-  Share2,
   Trash2,
   Mail,
   MessageSquareMore,
   ChevronDown,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,73 +29,185 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function MyArtistsPage() {
-  const artists = [
-    {
-      id: 1,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "verified",
-      revenueEstimate: { master: "M", publishing: "P" },
-    },
-    {
-      id: 2,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "pending",
-      revenueEstimate: { master: "", publishing: "P" },
-    },
-    {
-      id: 3,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "pending",
-      revenueEstimate: { master: "", publishing: "P" },
-    },
-    {
-      id: 4,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "pending",
-      revenueEstimate: { master: "", publishing: "P" },
-    },
-    {
-      id: 5,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "pending",
-      revenueEstimate: { master: "", publishing: "P" },
-    },
-    {
-      id: 6,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "pending",
-      revenueEstimate: { master: "", publishing: "P" },
-    },
-    {
-      id: 7,
-      name: "Kanye West",
-      avatar: "/api/placeholder/32/32",
-      country: "American",
-      countryFlag: "🇺🇸",
-      email: "pending",
-      revenueEstimate: { master: "", publishing: "P" },
-    },
-  ];
+  // State for dialog and artist management
+  const [isRosterDialogOpen, setIsRosterDialogOpen] = useState(false);
+  const [allArtists, setAllArtists] = useState<string[]>([]);
+  const [filteredArtists, setFilteredArtists] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingArtists, setIsLoadingArtists] = useState(false);
+  const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
+  const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
+  const [confirmRemoveDialog, setConfirmRemoveDialog] = useState({
+    isOpen: false,
+    artistName: "",
+  });
+  const [isRemoving, setIsRemoving] = useState(false);
+
+  const { user } = useAuthStore();
+  const [isLoadingSelectedArtists, setIsLoadingSelectedArtists] =
+    useState(false);
+
+  // LocalStorage key for selected artists
+  const getStorageKey = () => `selected_artists_${user?.username || "default"}`;
+
+  // Load selected artists from localStorage
+  const loadSelectedArtists = () => {
+    try {
+      const stored = localStorage.getItem(getStorageKey());
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error("Error loading selected artists from localStorage:", error);
+      return [];
+    }
+  };
+
+  // Save selected artists to localStorage
+  const saveSelectedArtists = (artists: string[]) => {
+    try {
+      localStorage.setItem(getStorageKey(), JSON.stringify(artists));
+    } catch (error) {
+      console.error("Error saving selected artists to localStorage:", error);
+    }
+  };
+
+  // Load selected artists on component mount
+  useEffect(() => {
+    if (user?.username) {
+      setIsLoadingSelectedArtists(true);
+      // Simulate loading delay for better UX
+      setTimeout(() => {
+        const storedArtists = loadSelectedArtists();
+        setSelectedArtists(storedArtists);
+        setIsLoadingSelectedArtists(false);
+      }, 500);
+    }
+  }, [user?.username]);
+
+  // Fetch all artists from API
+  const fetchAllArtists = async () => {
+    setIsLoadingArtists(true);
+    try {
+      const response = await fetch("/api/artists", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const artists = await response.json();
+      setAllArtists(artists);
+      setFilteredArtists(artists);
+    } catch (error) {
+      console.error("Error fetching artists:", error);
+      setAllArtists([]);
+      setFilteredArtists([]);
+    } finally {
+      setIsLoadingArtists(false);
+    }
+  };
+
+  // Handle search in artists list
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() === "") {
+      setFilteredArtists(allArtists);
+    } else {
+      const filtered = allArtists.filter((artist) =>
+        artist.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredArtists(filtered);
+    }
+  };
+
+  // Toggle artist selection in dialog
+  const handleToggleArtist = (artistName: string) => {
+    setTempSelectedArtists((prev) => {
+      if (prev.includes(artistName)) {
+        return prev.filter((artist) => artist !== artistName);
+      } else {
+        return [...prev, artistName];
+      }
+    });
+  };
+
+  // Add selected artists to the main list
+  const handleAddSelectedArtists = () => {
+    const newArtists = tempSelectedArtists.filter(
+      (artist) => !selectedArtists.includes(artist)
+    );
+
+    if (newArtists.length > 0) {
+      const updatedArtists = [...selectedArtists, ...newArtists];
+      setSelectedArtists(updatedArtists);
+      saveSelectedArtists(updatedArtists);
+    }
+
+    setTempSelectedArtists([]);
+    setIsRosterDialogOpen(false);
+  };
+
+  // Show confirmation dialog for removing artist
+  const handleRemoveArtist = (artistName: string) => {
+    setConfirmRemoveDialog({ isOpen: true, artistName });
+  };
+
+  // Confirm artist removal
+  const handleConfirmRemoveArtist = () => {
+    if (confirmRemoveDialog.artistName) {
+      setIsRemoving(true);
+      // Simulate removal delay for better UX
+      setTimeout(() => {
+        const updatedArtists = selectedArtists.filter(
+          (artist) => artist !== confirmRemoveDialog.artistName
+        );
+        setSelectedArtists(updatedArtists);
+        saveSelectedArtists(updatedArtists);
+        setConfirmRemoveDialog({ isOpen: false, artistName: "" });
+        setIsRemoving(false);
+      }, 500);
+    }
+  };
+
+  // Cancel artist removal
+  const handleCancelRemoveArtist = () => {
+    setConfirmRemoveDialog({ isOpen: false, artistName: "" });
+  };
+
+  // Open roster dialog and fetch artists
+  const handleOpenRosterDialog = () => {
+    setIsRosterDialogOpen(true);
+    setTempSelectedArtists([]); // Clear temporary selections when opening dialog
+    if (allArtists.length === 0) {
+      fetchAllArtists();
+    }
+  };
+
+  // Transform selected artists into the format expected by the UI
+  const artists = selectedArtists.map((artistName, index) => ({
+    id: index + 1,
+    name: artistName,
+    avatar: "/api/placeholder/32/32",
+    country: "American", // Default values since API doesn't provide this
+    countryFlag: "🇺🇸",
+    email: "verified",
+    revenueEstimate: { master: "M", publishing: "P" },
+  }));
 
   return (
     <div className="min-h-screen text-white p-4 sm:p-6 lg:p-8">
@@ -128,9 +242,21 @@ export default function MyArtistsPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            <Button className="bg-primary hover:bg-primary/90 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base">
-              ADD ARTIST
-            </Button>
+            <AddNewArtistDialog
+              isRosterDialogOpen={isRosterDialogOpen}
+              setIsRosterDialogOpen={setIsRosterDialogOpen}
+              handleOpenRosterDialog={handleOpenRosterDialog}
+              searchQuery={searchQuery}
+              handleSearchChange={handleSearchChange}
+              filteredArtists={filteredArtists}
+              isLoadingArtists={isLoadingArtists}
+              allArtists={allArtists}
+              selectedArtists={selectedArtists}
+              tempSelectedArtists={tempSelectedArtists}
+              setTempSelectedArtists={setTempSelectedArtists}
+              handleToggleArtist={handleToggleArtist}
+              handleAddSelectedArtists={handleAddSelectedArtists}
+            />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -159,217 +285,545 @@ export default function MyArtistsPage() {
 
         {/* Mobile Cards View (sm and below) */}
         <div className="block lg:hidden">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            {artists.map((artist) => (
-              <Card
-                key={artist.id}
-                className="bg-[#222C41] border-none hover:bg-[#404F61] transition-all duration-200"
-              >
-                <CardContent className="p-4 sm:p-6">
-                  {/* Artist Info */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
-                      <Users className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-white font-medium text-sm sm:text-base">
-                        {artist.name}
-                      </h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-base sm:text-lg">
-                          {artist.countryFlag}
-                        </span>
-                        <span className="text-gray-300 text-xs sm:text-sm">
-                          {artist.country}
-                        </span>
+          {isLoadingSelectedArtists ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-white" />
+              <span className="ml-2 text-white">Loading artists...</span>
+            </div>
+          ) : artists.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              {artists.map((artist) => (
+                <Card
+                  key={artist.id}
+                  className="bg-[#222C41] border-none hover:bg-[#404F61] transition-all duration-200"
+                >
+                  <CardContent className="p-4 sm:p-6">
+                    {/* Artist Info */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+                        <Users className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-white font-medium text-sm sm:text-base">
+                          {artist.name}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-base sm:text-lg">
+                            {artist.countryFlag}
+                          </span>
+                          <span className="text-gray-300 text-xs sm:text-sm">
+                            {artist.country}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Revenue Estimate */}
-                  <div className="mb-4">
-                    <p className="text-gray-400 text-xs sm:text-sm mb-2">
-                      LTM REVENUE ESTIMATE
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold text-xs sm:text-sm">
-                        M
-                      </div>
-                      <span className="font-extralight text-border">|</span>
-                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white text-primary font-bold text-xs sm:text-sm">
-                        P
+                    {/* Revenue Estimate */}
+                    <div className="mb-4">
+                      <p className="text-gray-400 text-xs sm:text-sm mb-2">
+                        LTM REVENUE ESTIMATE
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold text-xs sm:text-sm">
+                          M
+                        </div>
+                        <span className="font-extralight text-border">|</span>
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white text-primary font-bold text-xs sm:text-sm">
+                          P
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center justify-between">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="rounded-full p-2"
-                    >
-                      <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                    </Button>
-
-                    <div className="flex items-center gap-2">
+                    {/* Actions */}
+                    <div className="flex items-center justify-between">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-full bg-white p-2"
+                        className="rounded-full p-2"
                       >
-                        <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                        <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-full bg-white p-2"
-                      >
-                        <MessageSquareMore className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="rounded-full bg-primary p-2"
-                      >
-                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                      </Button>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-full bg-white p-2"
+                        >
+                          <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-full bg-white p-2"
+                        >
+                          <MessageSquareMore className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-full bg-primary p-2"
+                          onClick={() => handleRemoveArtist(artist.name)}
+                          disabled={isRemoving}
+                        >
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Users className="w-12 h-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">
+                No Artists Added
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Start by adding artists to your roster to manage them here.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Desktop Table View (lg and above) */}
         <div className="hidden lg:block rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#222C41] border-none rounded-2xl overflow-hidden">
-                <TableHead className="text-gray-300 font-medium py-4 px-6">
-                  ARTIST NAME
-                </TableHead>
-                <TableHead className="text-gray-300 font-medium py-4 px-6">
-                  COUNTRY
-                </TableHead>
-                <TableHead className="text-gray-300 font-medium py-4 px-6">
-                  EMAIL
-                </TableHead>
-                <TableHead className="text-gray-300 font-medium py-4 px-6">
-                  LTM REVENUE ESTIMATE
-                  <br />
-                  <span className="text-xs text-gray-400">
-                    MASTER | PUBLISHING
-                  </span>
-                </TableHead>
-                <TableHead className="text-gray-300 font-medium py-4 px-6">
-                  ACTIONS
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {artists.map((artist) => (
-                <TableRow
-                  key={artist.id}
-                  className="hover:bg-[#404F61] transition-colors border-none"
-                >
-                  <TableCell className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
-                        <Users className="w-4 h-4 text-gray-300" />
-                      </div>
-                      <span className="text-white font-medium">
-                        {artist.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{artist.countryFlag}</span>
-                      <span className="text-gray-300">{artist.country}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4 px-6">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="rounded-full"
-                      >
-                        <Mail className="w-4 h-4 text-primary" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold">
-                        M
-                      </div>
-                      <span className="font-extralight text-border">|</span>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-primary font-bold">
-                        P
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="rounded-full bg-white"
-                      >
-                        <Eye className="w-4 h-4 text-primary" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="rounded-full bg-white"
-                      >
-                        <MessageSquareMore className="w-4 h-4 text-primary" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="rounded-full bg-primary"
-                      >
-                        <Trash2 className="w-4 h-4 text-white" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {isLoadingSelectedArtists ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-white" />
+              <span className="ml-2 text-white">Loading artists...</span>
+            </div>
+          ) : artists.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-[#222C41] border-none rounded-2xl overflow-hidden">
+                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+                    ARTIST NAME
+                  </TableHead>
+                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+                    COUNTRY
+                  </TableHead>
+                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+                    EMAIL
+                  </TableHead>
+                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+                    LTM REVENUE ESTIMATE
+                    <br />
+                    <span className="text-xs text-gray-400">
+                      MASTER | PUBLISHING
+                    </span>
+                  </TableHead>
+                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+                    ACTIONS
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {artists.map((artist) => (
+                  <TableRow
+                    key={artist.id}
+                    className="hover:bg-[#404F61] transition-colors border-none"
+                  >
+                    <TableCell className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+                          <Users className="w-4 h-4 text-gray-300" />
+                        </div>
+                        <span className="text-white font-medium">
+                          {artist.name}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{artist.countryFlag}</span>
+                        <span className="text-gray-300">{artist.country}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 px-6">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="rounded-full"
+                        >
+                          <Mail className="w-4 h-4 text-primary" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold">
+                          M
+                        </div>
+                        <span className="font-extralight text-border">|</span>
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-primary font-bold">
+                          P
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="rounded-full bg-white"
+                        >
+                          <Eye className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="rounded-full bg-white"
+                        >
+                          <MessageSquareMore className="w-4 h-4 text-primary" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="rounded-full bg-primary"
+                          onClick={() => handleRemoveArtist(artist.name)}
+                          disabled={isRemoving}
+                        >
+                          <Trash2 className="w-4 h-4 text-white" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Users className="w-12 h-12 text-gray-400 mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">
+                No Artists Added
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Start by adding artists to your roster to manage them here.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Pagination */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
-          <div className="text-gray-400 text-xs sm:text-sm order-2 sm:order-1">
-            ROWS PER PAGE: <span className="text-white">10</span>
-          </div>
+        {artists.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6">
+            <div className="text-gray-400 text-xs sm:text-sm order-2 sm:order-1">
+              ROWS PER PAGE: <span className="text-white">10</span>
+            </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-4 order-1 sm:order-2">
-            <span className="text-gray-400 text-xs sm:text-sm">1-5 OF 13</span>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-8 h-8 sm:w-10 sm:h-10 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
-              >
-                <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-8 h-8 sm:w-10 sm:h-10 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
-              >
-                <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
-              </Button>
+            <div className="flex items-center justify-between sm:justify-end gap-4 order-1 sm:order-2">
+              <span className="text-gray-400 text-xs sm:text-sm">
+                1-{Math.min(artists.length, 10)} OF {artists.length}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-8 h-8 sm:w-10 sm:h-10 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+                  disabled={true}
+                >
+                  <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-8 h-8 sm:w-10 sm:h-10 p-0 text-gray-400 hover:text-white hover:bg-gray-700"
+                  disabled={true}
+                >
+                  <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Confirmation Dialog for Removing Artist */}
+        <Dialog
+          open={confirmRemoveDialog.isOpen}
+          onOpenChange={(open) =>
+            setConfirmRemoveDialog({ isOpen: open, artistName: "" })
+          }
+        >
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Remove Artist</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to remove{" "}
+                <span className="font-semibold">
+                  {confirmRemoveDialog.artistName}
+                </span>{" "}
+                from your roster? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelRemoveArtist}
+                disabled={isRemoving}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmRemoveArtist}
+                disabled={isRemoving}
+              >
+                {isRemoving ? "Removing..." : "Yes, Remove"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
 }
+
+interface AddNewArtistDialogProps {
+  isRosterDialogOpen: boolean;
+  setIsRosterDialogOpen: (open: boolean) => void;
+  handleOpenRosterDialog: () => void;
+  searchQuery: string;
+  handleSearchChange: (query: string) => void;
+  filteredArtists: string[];
+  isLoadingArtists: boolean;
+  allArtists: string[];
+  selectedArtists: string[];
+  tempSelectedArtists: string[];
+  setTempSelectedArtists: (artists: string[]) => void;
+  handleToggleArtist: (artistName: string) => void;
+  handleAddSelectedArtists: () => void;
+}
+
+const AddNewArtistDialog = ({
+  isRosterDialogOpen,
+  setIsRosterDialogOpen,
+  handleOpenRosterDialog,
+  searchQuery,
+  handleSearchChange,
+  filteredArtists,
+  isLoadingArtists,
+  allArtists,
+  selectedArtists,
+  tempSelectedArtists,
+  setTempSelectedArtists,
+  handleToggleArtist,
+  handleAddSelectedArtists,
+}: AddNewArtistDialogProps) => {
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAddWithLoading = () => {
+    setIsAdding(true);
+    // Simulate adding delay for better UX
+    setTimeout(() => {
+      handleAddSelectedArtists();
+      setIsAdding(false);
+    }, 500);
+  };
+  return (
+    <Dialog open={isRosterDialogOpen} onOpenChange={setIsRosterDialogOpen}>
+      <DialogTrigger asChild>
+        <Button
+          className="bg-primary hover:bg-primary/90 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full text-sm sm:text-base"
+          onClick={handleOpenRosterDialog}
+        >
+          ADD ARTIST
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+        {/* Header with Bot Lion */}
+        <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
+          <Image
+            src="/svgs/Bot-Lion.svg"
+            alt="Bot Lion"
+            width={110}
+            height={100}
+            className="object-contain absolute -top-1"
+          />
+          <Separator className="mt-15 z-50" />
+        </div>
+
+        <div className="px-8 pb-4 text-start">
+          <h2 className="text-2xl font-semibold text-white mb-2">
+            Add New Artist
+          </h2>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative rounded-full overflow-hidden px-8 pb-4">
+          <Input
+            placeholder="Search artists..."
+            value={searchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="pr-10 bg-background border-border text-white placeholder:text-border rounded-full"
+          />
+          <div className="absolute right-12 top-4.5 transform -translate-y-1/2">
+            <Image
+              src="/svgs/Golden-Paw.svg"
+              alt="Paw"
+              width={16}
+              height={16}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4 px-8 pb-4">
+          {/* Select All / Clear All */}
+          {filteredArtists.length > 0 && (
+            <div className="flex justify-between items-center py-2 border-b border-gray-600">
+              <span className="text-sm text-gray-400">
+                {filteredArtists.length} artist
+                {filteredArtists.length !== 1 ? "s" : ""} available
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    const availableArtists = filteredArtists.filter(
+                      (artist) => !selectedArtists.includes(artist)
+                    );
+                    setTempSelectedArtists(availableArtists);
+                  }}
+                  className="text-xs text-blue-400 hover:text-blue-300"
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTempSelectedArtists([])}
+                  className="text-xs text-gray-400 hover:text-gray-300"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Artists List */}
+          <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-hide">
+            {isLoadingArtists ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-white" />
+                <span className="ml-2 text-white">Loading artists...</span>
+              </div>
+            ) : filteredArtists.length > 0 ? (
+              filteredArtists.map((artist, index) => {
+                const isSelected = tempSelectedArtists.includes(artist);
+                const isAlreadyAdded = selectedArtists.includes(artist);
+
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
+                      isAlreadyAdded
+                        ? "bg-primary/20 border border-primary/30"
+                        : isSelected
+                        ? "bg-primary/20 border border-primary/30"
+                        : "bg-[#4A5A6C] hover:bg-[#5A6A7C]"
+                    }`}
+                    onClick={() =>
+                      !isAlreadyAdded && handleToggleArtist(artist)
+                    }
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                          isAlreadyAdded
+                            ? "bg-primary border-primary"
+                            : isSelected
+                            ? "bg-primary border-primary"
+                            : "border-white"
+                        }`}
+                      >
+                        {(isSelected || isAlreadyAdded) && (
+                          <svg
+                            className="w-3 h-3 text-white"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                      <div
+                        className={`text-sm font-medium ${
+                          isAlreadyAdded ? "text-white" : "text-white"
+                        }`}
+                      >
+                        {artist}
+                      </div>
+                    </div>
+                    {isAlreadyAdded && (
+                      <span className="text-xs text-green-400">Added</span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <span className="text-white text-sm mb-2">
+                  No artists found
+                </span>
+                <span className="text-gray-400 text-xs">
+                  {allArtists.length === 0
+                    ? "Failed to load artists from API"
+                    : "Try adjusting your search"}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Add to Source Button */}
+          <div className="flex justify-between items-center pt-4">
+            <div className="text-sm text-gray-400">
+              {tempSelectedArtists.length > 0 && (
+                <span>
+                  {tempSelectedArtists.length} artist
+                  {tempSelectedArtists.length !== 1 ? "s" : ""} selected
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTempSelectedArtists([]);
+                  setIsRosterDialogOpen(false);
+                }}
+                className="px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
+                onClick={handleAddWithLoading}
+                disabled={tempSelectedArtists.length === 0 || isAdding}
+              >
+                {isAdding ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    Add To Source{" "}
+                    {tempSelectedArtists.length > 0 &&
+                      `(${tempSelectedArtists.length})`}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

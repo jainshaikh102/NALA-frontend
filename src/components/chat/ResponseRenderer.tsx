@@ -46,36 +46,6 @@ const isArrayOfDataSections = (displayData: unknown): boolean => {
   return Array.isArray(displayData) && displayData.length > 0;
 };
 
-/**
- * Enhanced ResponseRenderer that can handle multiple data types in a single response.
- *
- * Supports:
- * 1. Single data type responses (original functionality)
- * 2. Multiple sections with different data types
- * 3. Array of data items with auto-detection
- * 4. Mixed content with both text and structured data
- *
- * Example response formats:
- *
- * // Multiple sections format:
- * displayData: {
- *   sections: [
- *     { type: "dataframe", data: {...}, title: "Top Tracks" },
- *     { type: "key_value", data: {...}, title: "Summary Metrics" }
- *   ]
- * }
- *
- * // Array of different data types:
- * displayData: [
- *   { index: [...], columns: [...], data: [...] }, // dataframe
- *   { metric1: 100, metric2: 200 }, // key_value
- *   { final_score: 85, verdict: "High" } // virality_report
- * ]
- *
- * // Single data type (existing format):
- * displayData: { index: [...], columns: [...], data: [...] }
- * dataType: "dataframe"
- */
 export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
   answerStr,
   displayData,

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useLogin } from "@/hooks/use-auth";
+import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 
 // Zod validation schema
 const signInSchema = z.object({
@@ -41,11 +42,6 @@ export default function SignInPage() {
   const onSubmit = (data: SignInFormData) => {
     console.log("Login data:", data);
     loginMutation.mutate(data);
-  };
-
-  const handleSocialLogin = (provider: string) => {
-    // TODO: Implement social login
-    console.log(`${provider} login coming soon!`);
   };
 
   return (
@@ -175,60 +171,17 @@ export default function SignInPage() {
                 </div>
               </div>
 
-              {/* Social Login */}
-              <div className="flex space-x-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSocialLogin("Facebook")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
-                >
-                  <Image
-                    src="/svgs/Facebook-Icon.svg"
-                    alt="Facebook"
-                    width={10}
-                    height={10}
-                  />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSocialLogin("Google")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
-                >
-                  <Image
-                    src="/svgs/Google-Icon.svg"
-                    alt="Google"
-                    width={20}
-                    height={20}
-                  />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSocialLogin("Apple")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
-                >
-                  <Image
-                    src="/svgs/Apple-Icon.svg"
-                    alt="Apple"
-                    width={20}
-                    height={20}
-                  />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleSocialLogin("Spotify")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
-                >
-                  <Image
-                    src="/svgs/Spotify-Icon.svg"
-                    alt="Spotify"
-                    width={20}
-                    height={20}
-                  />
-                </Button>
+              {/* Google Sign-In */}
+              <div className="w-full">
+                <GoogleSignInButton
+                  onSuccess={() => {
+                    console.log("Google sign-in successful!");
+                  }}
+                  onError={(error: string) => {
+                    console.error("Google sign-in error:", error);
+                  }}
+                  disabled={loginMutation.isPending}
+                />
               </div>
 
               {/* Sign Up Link */}

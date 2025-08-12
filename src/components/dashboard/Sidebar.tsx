@@ -62,11 +62,11 @@ const navigation: NavigationItem[] = [
     href: "/profile",
     icon: User,
   },
-  {
-    name: "Notifications",
-    href: "/notifications",
-    icon: Bell,
-  },
+  // {
+  //   name: "Notifications",
+  //   href: "/notifications",
+  //   icon: Bell,
+  // },
   {
     name: "Help",
     href: "/help",
@@ -156,9 +156,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
 
               {/* Tooltip */}
-              <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+              {/* <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                 {item.name}
-              </div>
+              </div> */}
             </Link>
           );
         })}
@@ -171,14 +171,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <User className="w-5 h-5 text-white" />
 
           {/* User Info Tooltip */}
-          {user && (
+          {/* {user && (
             <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
               <div className="font-medium">
                 {user.full_name || user.username || "User"}
               </div>
               <div className="text-gray-300">{user.email}</div>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* Logout */}
@@ -189,9 +189,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <LogOut className="w-5 h-5" />
 
           {/* Tooltip */}
-          <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+          {/* <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
             Logout
-          </div>
+          </div> */}
         </button>
       </div>
 
