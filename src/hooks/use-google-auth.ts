@@ -48,8 +48,6 @@ export function useGoogleAuth() {
   >({
     mutationFn: async (credential: string) => {
       try {
-        console.log("Google Auth - Making request to:", "/api/auth/google");
-        
         const response = await fetch("/api/auth/google", {
           method: "POST",
           headers: {
@@ -64,7 +62,6 @@ export function useGoogleAuth() {
         }
 
         const responseData = await response.json();
-        console.log("Google Auth - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("Google Auth - Error:", error);
@@ -86,8 +83,6 @@ export function useGoogleAuth() {
         lastName: backendUser.full_name?.split(" ").slice(1).join(" ") || "",
         createdAt: backendUser.created_at,
       };
-
-      console.log("Google Auth - Transformed user:", user);
       setAuth(user, access_token);
       toast.success("Google login successful!");
       router.push("/dashboard");
@@ -104,7 +99,6 @@ export function useGoogleAuth() {
       window.google.accounts.id.initialize({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
         callback: (response: GoogleCredentialResponse) => {
-          console.log("Google credential response:", response);
           googleLoginMutation.mutate(response.credential);
         },
         auto_select: false,

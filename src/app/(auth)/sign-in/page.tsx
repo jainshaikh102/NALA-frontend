@@ -40,7 +40,6 @@ export default function SignInPage() {
   });
 
   const onSubmit = (data: SignInFormData) => {
-    console.log("Login data:", data);
     loginMutation.mutate(data);
   };
 

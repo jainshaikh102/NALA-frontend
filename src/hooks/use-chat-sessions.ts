@@ -43,14 +43,14 @@ export function useChatSessions(username?: string) {
     error: sessionsError,
     refetch: refetchSessions,
   } = useQuery({
-    queryKey: ['chat-sessions', username],
+    queryKey: ["chat-sessions", username],
     queryFn: async (): Promise<ChatSession[]> => {
       if (!username) {
         throw new Error("Username is required");
       }
 
       const response = await fetch(`/api/chat/sessions/${username}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch chat sessions");
@@ -63,14 +63,18 @@ export function useChatSessions(username?: string) {
   });
 
   // Start a new chat session
-  const startSessionMutation = useMutation<StartSessionResponse, Error, StartSessionRequest>({
+  const startSessionMutation = useMutation<
+    StartSessionResponse,
+    Error,
+    StartSessionRequest & { onSessionCreated?: (sessionId: string) => void }
+  >({
     mutationFn: async (data: StartSessionRequest) => {
       const response = await fetch("/api/chat/start-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ username: data.username }),
       });
 
       if (!response.ok) {
@@ -80,12 +84,13 @@ export function useChatSessions(username?: string) {
 
       return response.json();
     },
-    onSuccess: (data) => {
-      console.log("Chat session started:", data);
+    onSuccess: (data, variables) => {
       toast.success("New chat session created!");
-      
+      if (variables.onSessionCreated && data.chat_session_id) {
+        variables.onSessionCreated(data.chat_session_id);
+      }
       // Invalidate and refetch sessions
-      queryClient.invalidateQueries({ queryKey: ['chat-sessions', username] });
+      queryClient.invalidateQueries({ queryKey: ["chat-sessions", username] });
     },
     onError: (error) => {
       console.error("Failed to start chat session:", error);
@@ -112,14 +117,16 @@ export function useChatSessions(username?: string) {
       return response.json();
     },
     onSuccess: (data, variables) => {
-      console.log("Chat session ended:", data);
       toast.success("Chat session deleted successfully!");
-      
-      // Remove the session from cache
-      queryClient.setQueryData(['chat-sessions', username], (oldData: ChatSession[] | undefined) => {
-        if (!oldData) return [];
-        return oldData.filter(session => session.session_id !== variables.chat_session_id);
-      });
+      queryClient.setQueryData(
+        ["chat-sessions", username],
+        (oldData: ChatSession[] | undefined) => {
+          if (!oldData) return [];
+          return oldData.filter(
+            (session) => session.session_id !== variables.chat_session_id
+          );
+        }
+      );
     },
     onError: (error) => {
       console.error("Failed to end chat session:", error);
@@ -142,14 +149,14 @@ export function useChatSessions(username?: string) {
 // Hook for managing chat history
 export function useChatHistory(sessionId?: string) {
   return useQuery({
-    queryKey: ['chat-history', sessionId],
+    queryKey: ["chat-history", sessionId],
     queryFn: async (): Promise<ChatHistoryMessage[]> => {
       if (!sessionId) {
         throw new Error("Session ID is required");
       }
 
       const response = await fetch(`/api/chat/history/${sessionId}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to fetch chat history");
