@@ -19,7 +19,6 @@ export default function DebugSignupPage() {
   const testDirectSignup = async () => {
     setLoading(true);
     try {
-      console.log("Testing direct signup call...");
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: {
@@ -32,18 +31,12 @@ export default function DebugSignupPage() {
           full_name: fullName,
         }),
       });
-
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
-
       let data;
       try {
         data = await response.json();
       } catch (e) {
         data = await response.text();
       }
-      console.log("Response data:", data);
-
       setDirectTestResult({
         status: response.status,
         ok: response.ok,

@@ -159,8 +159,6 @@ export function useLogin() {
         lastName: backendUser.full_name?.split(" ").slice(1).join(" ") || "",
         createdAt: backendUser.created_at,
       };
-
-      console.log("Transformed user:", user);
       setAuth(user, access_token); // No refresh token from backend
       toast.success("Login successful!");
       router.push("/dashboard");
@@ -179,8 +177,6 @@ export function useRegister() {
   return useMutation<{ data: RegisterResponse }, ApiError, RegisterRequest>({
     mutationFn: async (data: RegisterRequest) => {
       try {
-        console.log("useRegister - Making request to:", "/api/auth/signup");
-        console.log("useRegister - Request data:", data);
         const response = await fetch("/api/auth/signup", {
           method: "POST",
           headers: {
@@ -188,14 +184,11 @@ export function useRegister() {
           },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "Registration failed");
         }
-
         const responseData = await response.json();
-        console.log("useRegister - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useRegister - Error:", error);
@@ -225,11 +218,6 @@ export function useForgotPassword() {
   >({
     mutationFn: async (data: ForgotPasswordRequest) => {
       try {
-        console.log(
-          "useForgotPassword - Making request to:",
-          "/api/auth/forgot-password"
-        );
-        console.log("useForgotPassword - Request data:", data);
         const response = await fetch("/api/auth/forgot-password", {
           method: "POST",
           headers: {
@@ -237,14 +225,11 @@ export function useForgotPassword() {
           },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "Failed to send OTP");
         }
-
         const responseData = await response.json();
-        console.log("useForgotPassword - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useForgotPassword - Error:", error);
@@ -253,7 +238,6 @@ export function useForgotPassword() {
     },
     onSuccess: (response) => {
       toast.success(response.data.message || "OTP sent to your email!");
-      // Redirect to OTP verification page with email
       router.push(
         `/verify-otp?email=${encodeURIComponent(response.data.email)}`
       );
@@ -270,11 +254,6 @@ export function useVerifyOTP() {
   return useMutation<{ data: VerifyOTPResponse }, ApiError, VerifyOTPRequest>({
     mutationFn: async (data: VerifyOTPRequest) => {
       try {
-        console.log(
-          "useVerifyOTP - Making request to:",
-          "/api/auth/verify-otp"
-        );
-        console.log("useVerifyOTP - Request data:", data);
         const response = await fetch("/api/auth/verify-otp", {
           method: "POST",
           headers: {
@@ -282,14 +261,11 @@ export function useVerifyOTP() {
           },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "Invalid or expired OTP");
         }
-
         const responseData = await response.json();
-        console.log("useVerifyOTP - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useVerifyOTP - Error:", error);
@@ -297,9 +273,7 @@ export function useVerifyOTP() {
       }
     },
     onSuccess: (response) => {
-      console.log("response", response);
       toast.success(response.data.message || "OTP verified successfully!");
-      // Store reset token temporarily and redirect to reset password page
       sessionStorage.setItem("reset_token", response.data.reset_token);
       router.push("/reset-password");
     },
@@ -320,11 +294,6 @@ export function useResetPassword() {
   >({
     mutationFn: async (data: ResetPasswordRequest) => {
       try {
-        console.log(
-          "useResetPassword - Making request to:",
-          "/api/auth/reset-password"
-        );
-        console.log("useResetPassword - Request data:", data);
         const response = await fetch("/api/auth/reset-password", {
           method: "POST",
           headers: {
@@ -332,14 +301,11 @@ export function useResetPassword() {
           },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "Failed to reset password");
         }
-
         const responseData = await response.json();
-        console.log("useResetPassword - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useResetPassword - Error:", error);
@@ -348,7 +314,6 @@ export function useResetPassword() {
     },
     onSuccess: (response) => {
       toast.success(response.data.message || "Password reset successfully!");
-      // Clear reset token and redirect to login
       sessionStorage.removeItem("reset_token");
       router.push("/sign-in");
     },
@@ -369,11 +334,6 @@ export function useVerifyEmail() {
   >({
     mutationFn: async (data: VerifyEmailRequest) => {
       try {
-        console.log(
-          "useVerifyEmail - Making request to:",
-          "/api/auth/verify-email"
-        );
-        console.log("useVerifyEmail - Request data:", data);
         const response = await fetch("/api/auth/verify-email", {
           method: "POST",
           headers: {
@@ -381,14 +341,11 @@ export function useVerifyEmail() {
           },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "Email verification failed");
         }
-
         const responseData = await response.json();
-        console.log("useVerifyEmail - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useVerifyEmail - Error:", error);
@@ -418,9 +375,6 @@ export function useGoogleLogin() {
   >({
     mutationFn: async (data: GoogleLoginRequest) => {
       try {
-        console.log("useGoogleLogin - Making request to:", "/api/auth/google");
-        console.log("useGoogleLogin - Request data:", data);
-
         const response = await fetch("/api/auth/google", {
           method: "POST",
           headers: {
@@ -428,14 +382,11 @@ export function useGoogleLogin() {
           },
           body: JSON.stringify(data),
         });
-
         if (!response.ok) {
           const errorData = await response.json();
           throw new Error(errorData.error || "Google login failed");
         }
-
         const responseData = await response.json();
-        console.log("useGoogleLogin - Response:", responseData);
         return { data: responseData };
       } catch (error) {
         console.error("useGoogleLogin - Error:", error);
