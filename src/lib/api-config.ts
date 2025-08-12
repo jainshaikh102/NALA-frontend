@@ -3,11 +3,7 @@ import Cookies from "js-cookie";
 import { useAuthStore } from "@/store/auth-store";
 
 // Base URL
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "https://backend.nalabot.com";
-
-console.log("API_BASE_URL:", API_BASE_URL);
-
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 // Axios instance
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
