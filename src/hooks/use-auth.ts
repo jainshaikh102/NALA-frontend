@@ -84,6 +84,38 @@ export interface VerifyEmailResponse {
   user: User;
 }
 
+export interface GoogleLoginRequest {
+  credential: string;
+}
+
+export interface GoogleLoginResponse {
+  user: {
+    username: string;
+    full_name: string;
+    email: string;
+    payment_plan: string;
+    created_at?: string;
+  };
+  access_token: string;
+  token_type: string;
+}
+
+export interface GoogleLoginRequest {
+  credential: string;
+}
+
+export interface GoogleLoginResponse {
+  user: {
+    username: string;
+    full_name: string;
+    email: string;
+    payment_plan: string;
+    created_at?: string;
+  };
+  access_token: string;
+  token_type: string;
+}
+
 // Custom authentication hooks
 export function useLogin() {
   const { setAuth, setLoading } = useAuthStore();
@@ -371,6 +403,70 @@ export function useVerifyEmail() {
     },
     onError: (error) => {
       toast.error(error.message || "Email verification failed");
+    },
+  });
+}
+
+export function useGoogleLogin() {
+  const { setAuth, setLoading } = useAuthStore();
+  const router = useRouter();
+
+  return useMutation<
+    { data: GoogleLoginResponse },
+    ApiError,
+    GoogleLoginRequest
+  >({
+    mutationFn: async (data: GoogleLoginRequest) => {
+      try {
+        console.log("useGoogleLogin - Making request to:", "/api/auth/google");
+        console.log("useGoogleLogin - Request data:", data);
+
+        const response = await fetch("/api/auth/google", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Google login failed");
+        }
+
+        const responseData = await response.json();
+        console.log("useGoogleLogin - Response:", responseData);
+        return { data: responseData };
+      } catch (error) {
+        console.error("useGoogleLogin - Error:", error);
+        throw error;
+      }
+    },
+    onMutate: () => {
+      setLoading(true);
+    },
+    onSuccess: (response) => {
+      const { user: backendUser, access_token } = response.data;
+
+      // Transform backend user format to frontend User format
+      const user: User = {
+        id: backendUser.username,
+        email: backendUser.email,
+        username: backendUser.username,
+        firstName: backendUser.full_name?.split(" ")[0] || "",
+        lastName: backendUser.full_name?.split(" ").slice(1).join(" ") || "",
+        createdAt: backendUser.created_at,
+      };
+
+      console.log("Google login - Transformed user:", user);
+      setAuth(user, access_token);
+      toast.success("Google login successful!");
+      router.push("/dashboard");
+    },
+    onError: (error) => {
+      console.error("Google login error:", error);
+      setLoading(false);
+      toast.error(error.message || "Google login failed");
     },
   });
 }
