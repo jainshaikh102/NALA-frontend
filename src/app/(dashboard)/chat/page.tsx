@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -39,6 +39,12 @@ import { useAuthStore } from "@/store/auth-store";
 import { useGet, usePost } from "@/hooks/use-api";
 import { GoogleDriveConnector } from "@/components/sources/google-drive-connector";
 import { Badge } from "@/components/ui/badge";
+import {
+  useChatSessions,
+  useChatHistory,
+  type ChatSession,
+  type ChatHistoryMessage,
+} from "@/hooks/use-chat-sessions";
 
 interface ChatMessage {
   id: number;
@@ -78,7 +84,30 @@ const ChatPage = () => {
     chatTitle: string;
   }>({ isOpen: false, chatId: 0, chatTitle: "" });
 
+  // Chat session management state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [confirmDeleteSessionDialog, setConfirmDeleteSessionDialog] = useState<{
+    isOpen: boolean;
+    sessionId: string;
+    preview: string;
+  }>({ isOpen: false, sessionId: "", preview: "" });
+
   const { user } = useAuthStore();
+
+  // Chat session management hooks
+  const {
+    chatSessions,
+    isLoadingSessions,
+    startSession,
+    endSession,
+    isStartingSession,
+    isEndingSession,
+  } = useChatSessions(user?.username);
+
+  // Chat history hook for current session
+  const { data: chatHistory, isLoading: isLoadingHistory } = useChatHistory(
+    currentSessionId || undefined
+  );
 
   // Fetch selected artists from API
   const {
@@ -190,6 +219,7 @@ const ChatPage = () => {
         question: question,
         username: user?.username,
         model_name: "gemini-2.0-flash-001",
+        ...(currentSessionId && { chat_session_id: currentSessionId }),
       };
 
       console.log("Sending payload:", payload);
@@ -255,14 +285,34 @@ const ChatPage = () => {
   };
 
   // Update selected artists when API data changes
-  React.useEffect(() => {
-    if (selectedArtistsData?.length > 0) {
-      setSelectedArtists(selectedArtistsData);
+  useEffect(() => {
+    if (selectedArtistsData?.data && selectedArtistsData.data.length > 0) {
+      setSelectedArtists(selectedArtistsData.data);
     } else {
       setSelectedArtists([]);
     }
   }, [selectedArtistsData]);
-  console.log("eeeee", selectedArtistsData);
+
+  // Load chat history when session changes
+  useEffect(() => {
+    if (chatHistory && chatHistory.length > 0) {
+      const convertedMessages: ChatMessage[] = chatHistory.map(
+        (msg, index) => ({
+          id: Date.now() + index,
+          type: msg.role === "user" ? "user" : "bot",
+          content: msg.content,
+          timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          displayData: msg.display_data,
+          dataType: msg.data_type || "text",
+          queryStr: msg.query,
+        })
+      );
+      setMessages(convertedMessages);
+    }
+  }, [chatHistory]);
   // Fetch all artists from API
   const fetchAllArtists = async () => {
     setIsLoadingArtists(true);
@@ -367,6 +417,52 @@ const ChatPage = () => {
     console.log("Google Drive files connected:", files);
     // Here you can add the files to your sources
     // For now, we'll just show a success message
+  };
+
+  // Chat session management functions
+  const handleCreateNewSession = () => {
+    if (!user?.username) return;
+
+    startSession({ username: user.username });
+  };
+
+  const handleLoadChatSession = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    // Clear current messages and load history
+    setMessages([]);
+  };
+
+  const handleDeleteSession = (sessionId: string, preview: string) => {
+    setConfirmDeleteSessionDialog({
+      isOpen: true,
+      sessionId,
+      preview,
+    });
+  };
+
+  const handleConfirmDeleteSession = () => {
+    if (confirmDeleteSessionDialog.sessionId) {
+      endSession({ chat_session_id: confirmDeleteSessionDialog.sessionId });
+
+      // If we're deleting the current session, clear it
+      if (currentSessionId === confirmDeleteSessionDialog.sessionId) {
+        setCurrentSessionId(null);
+        setMessages([]);
+      }
+    }
+    setConfirmDeleteSessionDialog({
+      isOpen: false,
+      sessionId: "",
+      preview: "",
+    });
+  };
+
+  const handleCancelDeleteSession = () => {
+    setConfirmDeleteSessionDialog({
+      isOpen: false,
+      sessionId: "",
+      preview: "",
+    });
   };
 
   // Handle adding generate item (only one at a time)
@@ -922,40 +1018,72 @@ const ChatPage = () => {
                     variant="outline"
                     size="icon"
                     className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                    onClick={handleCreateNewSession}
+                    disabled={isStartingSession}
                   >
-                    <Plus className="h-4 w-4" />
+                    {isStartingSession ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  {recentChats.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group"
-                      onClick={() => handleSelectChat(chat.id)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">
-                          {chat.firstMessage}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 "
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteChatDialog({
-                            isOpen: true,
-                            chatId: chat.id,
-                            chatTitle: chat.firstMessage,
-                          });
-                        }}
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </Button>
+                  {isLoadingSessions ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        Loading chats...
+                      </span>
                     </div>
-                  ))}
+                  ) : chatSessions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No chat sessions yet. Click + to create your first chat.
+                    </div>
+                  ) : (
+                    chatSessions.map((session) => (
+                      <div
+                        key={session.session_id}
+                        className={`flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group ${
+                          currentSessionId === session.session_id
+                            ? "bg-primary/20 border-primary/30"
+                            : "bg-secondary/30"
+                        }`}
+                        onClick={() =>
+                          handleLoadChatSession(session.session_id)
+                        }
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">
+                            {session.preview || "New chat session"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(session.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSession(
+                              session.session_id,
+                              session.preview
+                            );
+                          }}
+                          disabled={isEndingSession}
+                        >
+                          {isEndingSession ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <X className="h-3 w-3 text-white" />
+                          )}
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -1081,44 +1209,78 @@ const ChatPage = () => {
                     <h2 className="text-lg font-semibold text-foreground">
                       Recent Chats
                     </h2>
-
+                    {/* Create New Chat Button */}
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                      onClick={handleCreateNewSession}
+                      disabled={isStartingSession}
                     >
-                      <Plus className="h-4 w-4" />
+                      {isStartingSession ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    {recentChats.map((chat) => (
-                      <div
-                        key={chat.id}
-                        className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group"
-                        onClick={() => handleSelectChat(chat.id)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">
-                            {chat.firstMessage}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmDeleteChatDialog({
-                              isOpen: true,
-                              chatId: chat.id,
-                              chatTitle: chat.firstMessage,
-                            });
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                    {isLoadingSessions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span className="text-sm text-muted-foreground">
+                          Loading chats...
+                        </span>
                       </div>
-                    ))}
+                    ) : chatSessions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No chat sessions yet. Click + to create your first chat.
+                      </div>
+                    ) : (
+                      chatSessions.map((session) => (
+                        <div
+                          key={session.session_id}
+                          className={`flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group ${
+                            currentSessionId === session.session_id
+                              ? "bg-primary/20 border-primary/30"
+                              : "bg-secondary/30"
+                          }`}
+                          onClick={() =>
+                            handleLoadChatSession(session.session_id)
+                          }
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">
+                              {session.preview || "New chat session"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(
+                                session.created_at
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSession(
+                                session.session_id,
+                                session.preview
+                              );
+                            }}
+                            disabled={isEndingSession}
+                          >
+                            {isEndingSession ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -1609,6 +1771,58 @@ const ChatPage = () => {
               disabled={deleteArtistMutation.isPending}
             >
               {deleteArtistMutation.isPending ? "Removing..." : "Yes, Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Session Confirmation Dialog */}
+      <Dialog
+        open={confirmDeleteSessionDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCancelDeleteSession();
+        }}
+      >
+        <DialogContent className="bg-[#222C41] border-none text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Delete Chat Session
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Are you sure you want to delete this chat session? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-[#151E31] rounded-lg p-3">
+              <p className="text-sm text-gray-300 truncate">
+                {confirmDeleteSessionDialog.preview || "Chat session"}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelDeleteSession}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDeleteSession}
+              disabled={isEndingSession}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isEndingSession ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Session"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
