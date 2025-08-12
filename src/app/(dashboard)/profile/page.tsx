@@ -735,6 +735,7 @@ const ProfilePage = () => {
                         <Check className="w-3 h-3 text-white" />
                       </div>
                       <span className="text-foreground text-sm">{feature}</span>
+
                     </div>
                   ))}
                 </div>
