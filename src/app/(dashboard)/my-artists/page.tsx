@@ -41,173 +41,104 @@ import {
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { useAuthStore } from "@/store/auth-store";
+import {
+  useSearchArtists,
+  useUserRoster,
+  type Artist,
+} from "@/hooks/use-artists";
 
 export default function MyArtistsPage() {
   // State for dialog and artist management
   const [isRosterDialogOpen, setIsRosterDialogOpen] = useState(false);
-  const [allArtists, setAllArtists] = useState<string[]>([]);
-  const [filteredArtists, setFilteredArtists] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoadingArtists, setIsLoadingArtists] = useState(false);
-  const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
-  const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
-  const [confirmRemoveDialog, setConfirmRemoveDialog] = useState({
+  const [tempSelectedArtists, setTempSelectedArtists] = useState<Artist[]>([]);
+  const [confirmRemoveDialog, setConfirmRemoveDialog] = useState<{
+    isOpen: boolean;
+    artist: Artist | null;
+  }>({
     isOpen: false,
-    artistName: "",
+    artist: null,
   });
-  const [isRemoving, setIsRemoving] = useState(false);
 
   const { user } = useAuthStore();
-  const [isLoadingSelectedArtists, setIsLoadingSelectedArtists] =
-    useState(false);
 
-  // LocalStorage key for selected artists
-  const getStorageKey = () => `selected_artists_${user?.username || "default"}`;
+  // API hooks
+  const {
+    userRoster,
+    isLoadingRoster,
+    addArtists,
+    removeArtist,
+    isAddingArtists,
+    isRemovingArtist,
+  } = useUserRoster(user?.username);
 
-  // Load selected artists from localStorage
-  const loadSelectedArtists = () => {
-    try {
-      const stored = localStorage.getItem(getStorageKey());
-      return stored ? JSON.parse(stored) : [];
-    } catch (error) {
-      console.error("Error loading selected artists from localStorage:", error);
-      return [];
-    }
-  };
+  const { data: searchResults, isLoading: isLoadingSearch } = useSearchArtists({
+    name: searchQuery || undefined,
+    offset: 0,
+    limit: 100,
+  });
 
-  // Save selected artists to localStorage
-  const saveSelectedArtists = (artists: string[]) => {
-    try {
-      localStorage.setItem(getStorageKey(), JSON.stringify(artists));
-    } catch (error) {
-      console.error("Error saving selected artists to localStorage:", error);
-    }
-  };
-
-  // Load selected artists on component mount
-  useEffect(() => {
-    if (user?.username) {
-      setIsLoadingSelectedArtists(true);
-      // Simulate loading delay for better UX
-      setTimeout(() => {
-        const storedArtists = loadSelectedArtists();
-        setSelectedArtists(storedArtists);
-        setIsLoadingSelectedArtists(false);
-      }, 500);
-    }
-  }, [user?.username]);
-
-  // Fetch all artists from API
-  const fetchAllArtists = async () => {
-    setIsLoadingArtists(true);
-    try {
-      const response = await fetch("/api/artists", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const artists = await response.json();
-      setAllArtists(artists);
-      setFilteredArtists(artists);
-    } catch (error) {
-      console.error("Error fetching artists:", error);
-      setAllArtists([]);
-      setFilteredArtists([]);
-    } finally {
-      setIsLoadingArtists(false);
-    }
-  };
+  // Get filtered search results
+  const filteredArtists = searchResults || [];
 
   // Handle search in artists list
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    if (query.trim() === "") {
-      setFilteredArtists(allArtists);
-    } else {
-      const filtered = allArtists.filter((artist) =>
-        artist.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredArtists(filtered);
-    }
   };
 
   // Toggle artist selection in dialog
-  const handleToggleArtist = (artistName: string) => {
+  const handleToggleArtist = (artist: Artist) => {
     setTempSelectedArtists((prev) => {
-      if (prev.includes(artistName)) {
-        return prev.filter((artist) => artist !== artistName);
+      const isSelected = prev.some((a) => a.id === artist.id);
+      if (isSelected) {
+        return prev.filter((a) => a.id !== artist.id);
       } else {
-        return [...prev, artistName];
+        return [...prev, artist];
       }
     });
   };
 
   // Add selected artists to the main list
   const handleAddSelectedArtists = () => {
-    const newArtists = tempSelectedArtists.filter(
-      (artist) => !selectedArtists.includes(artist)
-    );
-
-    if (newArtists.length > 0) {
-      const updatedArtists = [...selectedArtists, ...newArtists];
-      setSelectedArtists(updatedArtists);
-      saveSelectedArtists(updatedArtists);
+    if (tempSelectedArtists.length > 0 && user?.username) {
+      addArtists({
+        username: user.username,
+        selected_artists: tempSelectedArtists,
+      });
+      setTempSelectedArtists([]);
+      setIsRosterDialogOpen(false);
     }
-
-    setTempSelectedArtists([]);
-    setIsRosterDialogOpen(false);
   };
 
   // Show confirmation dialog for removing artist
-  const handleRemoveArtist = (artistName: string) => {
-    setConfirmRemoveDialog({ isOpen: true, artistName });
+  const handleRemoveArtist = (artist: Artist) => {
+    setConfirmRemoveDialog({ isOpen: true, artist });
   };
 
   // Confirm artist removal
   const handleConfirmRemoveArtist = () => {
-    if (confirmRemoveDialog.artistName) {
-      setIsRemoving(true);
-      // Simulate removal delay for better UX
-      setTimeout(() => {
-        const updatedArtists = selectedArtists.filter(
-          (artist) => artist !== confirmRemoveDialog.artistName
-        );
-        setSelectedArtists(updatedArtists);
-        saveSelectedArtists(updatedArtists);
-        setConfirmRemoveDialog({ isOpen: false, artistName: "" });
-        setIsRemoving(false);
-      }, 500);
+    if (confirmRemoveDialog.artist && user?.username) {
+      removeArtist({
+        username: user.username,
+        artist: confirmRemoveDialog.artist,
+      });
+      setConfirmRemoveDialog({ isOpen: false, artist: null });
     }
   };
 
   // Cancel artist removal
   const handleCancelRemoveArtist = () => {
-    setConfirmRemoveDialog({ isOpen: false, artistName: "" });
+    setConfirmRemoveDialog({ isOpen: false, artist: null });
   };
 
-  // Open roster dialog and fetch artists
+  // Open roster dialog
   const handleOpenRosterDialog = () => {
     setIsRosterDialogOpen(true);
     setTempSelectedArtists([]); // Clear temporary selections when opening dialog
-    if (allArtists.length === 0) {
-      fetchAllArtists();
-    }
   };
 
-  // Transform selected artists into the format expected by the UI
-  const artists = selectedArtists.map((artistName, index) => ({
-    id: index + 1,
-    name: artistName,
-    avatar: "/api/placeholder/32/32",
-    country: "American", // Default values since API doesn't provide this
-    countryFlag: "🇺🇸",
-    email: "verified",
-    revenueEstimate: { master: "M", publishing: "P" },
-  }));
+  // Use the user roster directly from API
+  const artists = userRoster;
 
   return (
     <div className="min-h-screen text-white p-4 sm:p-6 lg:p-8">
@@ -249,13 +180,13 @@ export default function MyArtistsPage() {
               searchQuery={searchQuery}
               handleSearchChange={handleSearchChange}
               filteredArtists={filteredArtists}
-              isLoadingArtists={isLoadingArtists}
-              allArtists={allArtists}
-              selectedArtists={selectedArtists}
+              isLoadingArtists={isLoadingSearch}
+              userRoster={userRoster}
               tempSelectedArtists={tempSelectedArtists}
               setTempSelectedArtists={setTempSelectedArtists}
               handleToggleArtist={handleToggleArtist}
               handleAddSelectedArtists={handleAddSelectedArtists}
+              isAddingArtists={isAddingArtists}
             />
 
             <DropdownMenu>
@@ -285,7 +216,7 @@ export default function MyArtistsPage() {
 
         {/* Mobile Cards View (sm and below) */}
         <div className="block lg:hidden">
-          {isLoadingSelectedArtists ? (
+          {isLoadingRoster ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-white" />
               <span className="ml-2 text-white">Loading artists...</span>
@@ -308,9 +239,7 @@ export default function MyArtistsPage() {
                           {artist.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-base sm:text-lg">
-                            {artist.countryFlag}
-                          </span>
+                          <span className="text-base sm:text-lg">🌍</span>
                           <span className="text-gray-300 text-xs sm:text-sm">
                             {artist.country}
                           </span>
@@ -363,8 +292,8 @@ export default function MyArtistsPage() {
                           size="sm"
                           variant="outline"
                           className="rounded-full bg-primary p-2"
-                          onClick={() => handleRemoveArtist(artist.name)}
-                          disabled={isRemoving}
+                          onClick={() => handleRemoveArtist(artist)}
+                          disabled={isRemovingArtist}
                         >
                           <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                         </Button>
@@ -389,7 +318,7 @@ export default function MyArtistsPage() {
 
         {/* Desktop Table View (lg and above) */}
         <div className="hidden lg:block rounded-lg overflow-hidden">
-          {isLoadingSelectedArtists ? (
+          {isLoadingRoster ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-white" />
               <span className="ml-2 text-white">Loading artists...</span>
@@ -428,7 +357,15 @@ export default function MyArtistsPage() {
                     <TableCell className="py-4 px-6">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
-                          <Users className="w-4 h-4 text-gray-300" />
+                          {artist?.picture_url ? (
+                            <img
+                              src={artist?.picture_url}
+                              alt={artist.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Users className="w-4 h-4 text-gray-300" />
+                          )}
                         </div>
                         <span className="text-white font-medium">
                           {artist.name}
@@ -437,7 +374,7 @@ export default function MyArtistsPage() {
                     </TableCell>
                     <TableCell className="py-4 px-6">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">{artist.countryFlag}</span>
+                        <span className="text-lg">🌍</span>
                         <span className="text-gray-300">{artist.country}</span>
                       </div>
                     </TableCell>
@@ -483,8 +420,8 @@ export default function MyArtistsPage() {
                           size="icon"
                           variant="outline"
                           className="rounded-full bg-primary"
-                          onClick={() => handleRemoveArtist(artist.name)}
-                          disabled={isRemoving}
+                          onClick={() => handleRemoveArtist(artist)}
+                          disabled={isRemovingArtist}
                         >
                           <Trash2 className="w-4 h-4 text-white" />
                         </Button>
@@ -544,7 +481,7 @@ export default function MyArtistsPage() {
         <Dialog
           open={confirmRemoveDialog.isOpen}
           onOpenChange={(open) =>
-            setConfirmRemoveDialog({ isOpen: open, artistName: "" })
+            setConfirmRemoveDialog({ isOpen: open, artist: null })
           }
         >
           <DialogContent className="max-w-md">
@@ -553,7 +490,7 @@ export default function MyArtistsPage() {
               <DialogDescription>
                 Are you sure you want to remove{" "}
                 <span className="font-semibold">
-                  {confirmRemoveDialog.artistName}
+                  {confirmRemoveDialog.artist?.name}
                 </span>{" "}
                 from your roster? This action cannot be undone.
               </DialogDescription>
@@ -562,16 +499,16 @@ export default function MyArtistsPage() {
               <Button
                 variant="outline"
                 onClick={handleCancelRemoveArtist}
-                disabled={isRemoving}
+                disabled={isRemovingArtist}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleConfirmRemoveArtist}
-                disabled={isRemoving}
+                disabled={isRemovingArtist}
               >
-                {isRemoving ? "Removing..." : "Yes, Remove"}
+                {isRemovingArtist ? "Removing..." : "Yes, Remove"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -587,14 +524,14 @@ interface AddNewArtistDialogProps {
   handleOpenRosterDialog: () => void;
   searchQuery: string;
   handleSearchChange: (query: string) => void;
-  filteredArtists: string[];
+  filteredArtists: Artist[];
   isLoadingArtists: boolean;
-  allArtists: string[];
-  selectedArtists: string[];
-  tempSelectedArtists: string[];
-  setTempSelectedArtists: (artists: string[]) => void;
-  handleToggleArtist: (artistName: string) => void;
+  userRoster: Artist[];
+  tempSelectedArtists: Artist[];
+  setTempSelectedArtists: (artists: Artist[]) => void;
+  handleToggleArtist: (artist: Artist) => void;
   handleAddSelectedArtists: () => void;
+  isAddingArtists: boolean;
 }
 
 const AddNewArtistDialog = ({
@@ -605,23 +542,13 @@ const AddNewArtistDialog = ({
   handleSearchChange,
   filteredArtists,
   isLoadingArtists,
-  allArtists,
-  selectedArtists,
+  userRoster,
   tempSelectedArtists,
   setTempSelectedArtists,
   handleToggleArtist,
   handleAddSelectedArtists,
+  isAddingArtists,
 }: AddNewArtistDialogProps) => {
-  const [isAdding, setIsAdding] = useState(false);
-
-  const handleAddWithLoading = () => {
-    setIsAdding(true);
-    // Simulate adding delay for better UX
-    setTimeout(() => {
-      handleAddSelectedArtists();
-      setIsAdding(false);
-    }, 500);
-  };
   return (
     <Dialog open={isRosterDialogOpen} onOpenChange={setIsRosterDialogOpen}>
       <DialogTrigger asChild>
@@ -671,19 +598,19 @@ const AddNewArtistDialog = ({
 
         <div className="space-y-4 px-8 pb-4">
           {/* Select All / Clear All */}
-          {filteredArtists.length > 0 && (
+          {filteredArtists?.results?.length > 0 && (
             <div className="flex justify-between items-center py-2 border-b border-gray-600">
               <span className="text-sm text-gray-400">
-                {filteredArtists.length} artist
-                {filteredArtists.length !== 1 ? "s" : ""} available
+                {filteredArtists?.total} artist
+                {filteredArtists?.total !== 1 ? "s" : ""} available
               </span>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const availableArtists = filteredArtists.filter(
-                      (artist) => !selectedArtists.includes(artist)
+                    const availableArtists = filteredArtists?.results.filter(
+                      (artist) => !userRoster.some((r) => r.id === artist.id)
                     );
                     setTempSelectedArtists(availableArtists);
                   }}
@@ -710,10 +637,14 @@ const AddNewArtistDialog = ({
                 <Loader2 className="h-6 w-6 animate-spin text-white" />
                 <span className="ml-2 text-white">Loading artists...</span>
               </div>
-            ) : filteredArtists.length > 0 ? (
-              filteredArtists.map((artist, index) => {
-                const isSelected = tempSelectedArtists.includes(artist);
-                const isAlreadyAdded = selectedArtists.includes(artist);
+            ) : filteredArtists?.results.length > 0 ? (
+              filteredArtists?.results.map((artist, index) => {
+                const isSelected = tempSelectedArtists.some(
+                  (a) => a.id === artist.id
+                );
+                const isAlreadyAdded = userRoster.some(
+                  (r) => r.id === artist.id
+                );
 
                 return (
                   <div
@@ -758,7 +689,7 @@ const AddNewArtistDialog = ({
                           isAlreadyAdded ? "text-white" : "text-white"
                         }`}
                       >
-                        {artist}
+                        {artist.name}
                       </div>
                     </div>
                     {isAlreadyAdded && (
@@ -773,9 +704,7 @@ const AddNewArtistDialog = ({
                   No artists found
                 </span>
                 <span className="text-gray-400 text-xs">
-                  {allArtists.length === 0
-                    ? "Failed to load artists from API"
-                    : "Try adjusting your search"}
+                  Try adjusting your search
                 </span>
               </div>
             )}
@@ -804,17 +733,17 @@ const AddNewArtistDialog = ({
               </Button>
               <Button
                 className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
-                onClick={handleAddWithLoading}
-                disabled={tempSelectedArtists.length === 0 || isAdding}
+                onClick={handleAddSelectedArtists}
+                disabled={tempSelectedArtists.length === 0 || isAddingArtists}
               >
-                {isAdding ? (
+                {isAddingArtists ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Adding...
                   </>
                 ) : (
                   <>
-                    Add To Source{" "}
+                    Add Artist{" "}
                     {tempSelectedArtists.length > 0 &&
                       `(${tempSelectedArtists.length})`}
                   </>
