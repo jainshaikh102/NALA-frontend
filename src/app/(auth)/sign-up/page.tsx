@@ -55,7 +55,6 @@ export default function SignUpPage() {
       confirm_password: data.confirmPassword,
       full_name: data.full_name,
     };
-    console.log("Register data:", registerData);
     registerMutation.mutate(registerData);
   };
 

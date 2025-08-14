@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -39,6 +39,14 @@ import { useAuthStore } from "@/store/auth-store";
 import { useGet, usePost } from "@/hooks/use-api";
 import { GoogleDriveConnector } from "@/components/sources/google-drive-connector";
 import { Badge } from "@/components/ui/badge";
+import {
+  useChatSessions,
+  useChatHistory,
+  type ChatSession,
+  type ChatHistoryMessage,
+} from "@/hooks/use-chat-sessions";
+import { useChatRoster } from "@/hooks/use-chat-roster";
+import { useUserRoster, type Artist } from "@/hooks/use-artists";
 
 interface ChatMessage {
   id: number;
@@ -78,7 +86,53 @@ const ChatPage = () => {
     chatTitle: string;
   }>({ isOpen: false, chatId: 0, chatTitle: "" });
 
+  // Chat session management state
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [confirmDeleteSessionDialog, setConfirmDeleteSessionDialog] = useState<{
+    isOpen: boolean;
+    sessionId: string;
+    preview: string;
+  }>({ isOpen: false, sessionId: "", preview: "" });
+
+  // Roster management state
+  const [isAddRosterDialogOpen, setIsAddRosterDialogOpen] = useState(false);
+  const [tempSelectedRosterArtists, setTempSelectedRosterArtists] = useState<
+    Artist[]
+  >([]);
+  const [confirmRemoveRosterDialog, setConfirmRemoveRosterDialog] = useState<{
+    isOpen: boolean;
+    artistName: string;
+  }>({ isOpen: false, artistName: "" });
+
   const { user } = useAuthStore();
+
+  // Chat session management hooks
+  const {
+    chatSessions,
+    isLoadingSessions,
+    startSession,
+    endSession,
+    isStartingSession,
+    isEndingSession,
+  } = useChatSessions(user?.username);
+
+  // Chat history hook for current session
+  const { data: chatHistory, isLoading: isLoadingHistory } = useChatHistory(
+    currentSessionId || undefined
+  );
+
+  // Chat roster management hooks
+  const {
+    selectedArtists: chatSelectedArtists,
+    isLoadingSelected,
+    selectArtists,
+    deselectArtist,
+    isSelectingArtists,
+    isDeselectingArtist,
+  } = useChatRoster(currentSessionId || undefined);
+
+  // User roster hook for adding artists to chat
+  const { userRoster, isLoadingRoster } = useUserRoster(user?.username);
 
   // Fetch selected artists from API
   const {
@@ -143,30 +197,6 @@ const ChatPage = () => {
     { id: 5, query: "View Music Industry Insights" },
   ];
 
-  // Mock data for recent chats
-  const [recentChats, setRecentChats] = useState([
-    {
-      id: 1,
-      firstMessage: "Compare monthly earnings for selected artists",
-    },
-    {
-      id: 2,
-      firstMessage: "Which artist has more followers on Instagram?",
-    },
-    {
-      id: 3,
-      firstMessage: "What's the latest news on the music industry?",
-    },
-    {
-      id: 4,
-      firstMessage: "Analyze streaming performance across platforms",
-    },
-    {
-      id: 5,
-      firstMessage: "Show me the top trending songs this week",
-    },
-  ]);
-
   // API Integration
   const sendMessage = async (question: string) => {
     if (!question.trim()) return;
@@ -190,9 +220,8 @@ const ChatPage = () => {
         question: question,
         username: user?.username,
         model_name: "gemini-2.0-flash-001",
+        ...(currentSessionId && { chat_session_id: currentSessionId }),
       };
-
-      console.log("Sending payload:", payload);
 
       const response = await fetch("/api/chat/execute-query", {
         method: "POST",
@@ -201,9 +230,6 @@ const ChatPage = () => {
         },
         body: JSON.stringify(payload),
       });
-
-      console.log("Response status:", response.status);
-      console.log("Response headers:", response.headers);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -214,7 +240,6 @@ const ChatPage = () => {
       }
 
       const data = await response.json();
-      console.log("Response data:", data);
 
       const botMessage = {
         id: Date.now() + 1,
@@ -255,14 +280,54 @@ const ChatPage = () => {
   };
 
   // Update selected artists when API data changes
-  React.useEffect(() => {
-    if (selectedArtistsData?.length > 0) {
-      setSelectedArtists(selectedArtistsData);
+  useEffect(() => {
+    if (selectedArtistsData?.data && selectedArtistsData.data.length > 0) {
+      setSelectedArtists(selectedArtistsData.data);
     } else {
       setSelectedArtists([]);
     }
   }, [selectedArtistsData]);
-  console.log("eeeee", selectedArtistsData);
+
+  // Load chat history when session changes
+  useEffect(() => {
+    if (chatHistory && chatHistory.length > 0) {
+      const convertedMessages: ChatMessage[] = chatHistory.map(
+        (msg, index) => ({
+          id: Date.now() + index,
+          type: msg.role === "user" ? "user" : "bot",
+          content: msg.content,
+          timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          displayData: msg.display_data,
+          dataType: msg.data_type || "text",
+          queryStr: msg.query,
+        })
+      );
+      setMessages(convertedMessages);
+    } else if (currentSessionId && (!chatHistory || chatHistory.length === 0)) {
+      // Clear messages if we have a session but no history (new session)
+      setMessages([]);
+    }
+  }, [chatHistory, currentSessionId]);
+
+  // Auto-select the top (most recent) chat session when chat sessions are loaded
+  useEffect(() => {
+    if (chatSessions && chatSessions.length > 0 && !currentSessionId) {
+      // Sort sessions by created_at to get the most recent one
+      const sortedSessions = [...chatSessions].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const mostRecentSession = sortedSessions[0];
+
+      if (mostRecentSession) {
+        setCurrentSessionId(mostRecentSession.session_id);
+        // Don't clear messages here as they will be loaded by the chatHistory effect
+      }
+    }
+  }, [chatSessions, currentSessionId]);
   // Fetch all artists from API
   const fetchAllArtists = async () => {
     setIsLoadingArtists(true);
@@ -369,6 +434,108 @@ const ChatPage = () => {
     // For now, we'll just show a success message
   };
 
+  // Chat session management functions
+  const handleCreateNewSession = () => {
+    if (!user?.username) return;
+
+    startSession({
+      username: user.username,
+      onSessionCreated: (sessionId: string) => {
+        // Set the new session as current and clear messages
+        setCurrentSessionId(sessionId);
+        setMessages([]);
+      },
+    });
+  };
+
+  const handleLoadChatSession = (sessionId: string) => {
+    setCurrentSessionId(sessionId);
+    // Clear current messages and load history
+    setMessages([]);
+  };
+
+  const handleDeleteSession = (sessionId: string, preview: string) => {
+    setConfirmDeleteSessionDialog({
+      isOpen: true,
+      sessionId,
+      preview,
+    });
+  };
+
+  const handleConfirmDeleteSession = () => {
+    if (confirmDeleteSessionDialog.sessionId) {
+      endSession({ chat_session_id: confirmDeleteSessionDialog.sessionId });
+
+      // If we're deleting the current session, clear it
+      if (currentSessionId === confirmDeleteSessionDialog.sessionId) {
+        setCurrentSessionId(null);
+        setMessages([]);
+      }
+    }
+    setConfirmDeleteSessionDialog({
+      isOpen: false,
+      sessionId: "",
+      preview: "",
+    });
+  };
+
+  const handleCancelDeleteSession = () => {
+    setConfirmDeleteSessionDialog({
+      isOpen: false,
+      sessionId: "",
+      preview: "",
+    });
+  };
+
+  // Roster management functions
+  const handleOpenAddRosterDialog = () => {
+    setIsAddRosterDialogOpen(true);
+    setTempSelectedRosterArtists([]);
+  };
+
+  const handleToggleRosterArtist = (artist: Artist) => {
+    setTempSelectedRosterArtists((prev) => {
+      const isSelected = prev.some((a) => a.id === artist.id);
+      if (isSelected) {
+        return prev.filter((a) => a.id !== artist.id);
+      } else {
+        return [...prev, artist];
+      }
+    });
+  };
+
+  const handleAddRosterArtists = () => {
+    if (tempSelectedRosterArtists.length > 0 && currentSessionId) {
+      const artistNames = tempSelectedRosterArtists.map(
+        (artist) => artist.name
+      );
+      selectArtists({
+        chat_session_id: currentSessionId,
+        artist_names: artistNames,
+      });
+      setTempSelectedRosterArtists([]);
+      setIsAddRosterDialogOpen(false);
+    }
+  };
+
+  const handleRemoveRosterArtist = (artistName: string) => {
+    setConfirmRemoveRosterDialog({ isOpen: true, artistName });
+  };
+
+  const handleConfirmRemoveRosterArtist = () => {
+    if (confirmRemoveRosterDialog.artistName && currentSessionId) {
+      deselectArtist({
+        chat_session_id: currentSessionId,
+        artist_name: confirmRemoveRosterDialog.artistName,
+      });
+      setConfirmRemoveRosterDialog({ isOpen: false, artistName: "" });
+    }
+  };
+
+  const handleCancelRemoveRosterArtist = () => {
+    setConfirmRemoveRosterDialog({ isOpen: false, artistName: "" });
+  };
+
   // Handle adding generate item (only one at a time)
   const handleAddGenerateItem = (item: string) => {
     setSelectedGenerateItem(item);
@@ -389,19 +556,6 @@ const ChatPage = () => {
       default:
         return "/svgs/StickwithStart-WhiteIcon.svg";
     }
-  };
-
-  // Handle delete chat
-  const handleDeleteChat = (chatId: number) => {
-    setRecentChats((prev) => prev.filter((chat) => chat.id !== chatId));
-    setConfirmDeleteChatDialog({ isOpen: false, chatId: 0, chatTitle: "" });
-  };
-
-  // Handle chat selection
-  const handleSelectChat = (chatId: number) => {
-    // Load chat history for the selected chat
-    console.log("Load chat:", chatId);
-    // Here you would typically load the chat messages and switch to chat tab
   };
 
   // Handle pre-question click
@@ -642,246 +796,34 @@ const ChatPage = () => {
                   <h2 className="text-lg font-semibold text-foreground">
                     Rosters{" "}
                     <span className="text-sm text-muted-foreground">
-                      ({selectedArtists.length})
+                      ({chatSelectedArtists.length})
                     </span>
                   </h2>
-                  <Dialog
-                    open={isRosterDialogOpen}
-                    onOpenChange={setIsRosterDialogOpen}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                    onClick={handleOpenAddRosterDialog}
+                    disabled={!currentSessionId || isSelectingArtists}
                   >
-                    <DialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
-                        onClick={handleOpenRosterDialog}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
-                      {/* Header with Bot Lion */}
-                      <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
-                        <Image
-                          src="/svgs/Bot-Lion.svg"
-                          alt="Bot Lion"
-                          width={110}
-                          height={100}
-                          className="object-contain absolute -top-1"
-                        />
-                        <Separator className="mt-15 z-50" />
-                      </div>
-
-                      <div className="px-8 pb-4 text-start">
-                        <h2 className="text-2xl font-semibold text-white mb-2">
-                          Add New Artist
-                        </h2>
-                      </div>
-
-                      {/* Search Input */}
-                      <div className="relative rounded-full overflow-hidden px-8 pb-4">
-                        <Input
-                          placeholder="Search artists..."
-                          value={searchQuery}
-                          onChange={(e) => handleSearchChange(e.target.value)}
-                          className="pr-10 bg-background border-border text-white placeholder:text-border rounded-full"
-                        />
-                        <div className="absolute right-12 top-4.5 transform -translate-y-1/2">
-                          <Image
-                            src="/svgs/Golden-Paw.svg"
-                            alt="Paw"
-                            width={16}
-                            height={16}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4 px-8 pb-4">
-                        {/* Select All / Clear All */}
-                        {filteredArtists.length > 0 && (
-                          <div className="flex justify-between items-center py-2 border-b border-gray-600">
-                            <span className="text-sm text-gray-400">
-                              {filteredArtists.length} artist
-                              {filteredArtists.length !== 1 ? "s" : ""}{" "}
-                              available
-                            </span>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  const availableArtists =
-                                    filteredArtists.filter(
-                                      (artist) =>
-                                        !selectedArtists.includes(artist)
-                                    );
-                                  setTempSelectedArtists(availableArtists);
-                                }}
-                                className="text-xs text-blue-400 hover:text-blue-300"
-                              >
-                                Select All
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setTempSelectedArtists([])}
-                                className="text-xs text-gray-400 hover:text-gray-300"
-                              >
-                                Clear
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Artists List */}
-                        <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-hide">
-                          {isLoadingArtists ? (
-                            <div className="flex items-center justify-center py-8">
-                              <Loader2 className="h-6 w-6 animate-spin text-white" />
-                              <span className="ml-2 text-white">
-                                Loading artists...
-                              </span>
-                            </div>
-                          ) : filteredArtists.length > 0 ? (
-                            filteredArtists.map((artist, index) => {
-                              const isSelected =
-                                tempSelectedArtists.includes(artist);
-                              const isAlreadyAdded =
-                                selectedArtists.includes(artist);
-
-                              return (
-                                <div
-                                  key={index}
-                                  className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
-                                    isAlreadyAdded
-                                      ? "bg-primary/20 border border-primary/30"
-                                      : isSelected
-                                      ? "bg-primary/20 border border-primary/30"
-                                      : "bg-[#4A5A6C] hover:bg-[#5A6A7C]"
-                                  }`}
-                                  onClick={() =>
-                                    !isAlreadyAdded &&
-                                    handleToggleArtist(artist)
-                                  }
-                                >
-                                  <div className="flex items-center space-x-3">
-                                    <div
-                                      className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
-                                        isAlreadyAdded
-                                          ? "bg-primary border-primary"
-                                          : isSelected
-                                          ? "bg-primary border-primary"
-                                          : "border-white"
-                                      }`}
-                                    >
-                                      {(isSelected || isAlreadyAdded) && (
-                                        <svg
-                                          className="w-3 h-3 text-white"
-                                          fill="currentColor"
-                                          viewBox="0 0 20 20"
-                                        >
-                                          <path
-                                            fillRule="evenodd"
-                                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                            clipRule="evenodd"
-                                          />
-                                        </svg>
-                                      )}
-                                    </div>
-                                    <div
-                                      className={`text-sm font-medium ${
-                                        isAlreadyAdded
-                                          ? "text-white"
-                                          : "text-white"
-                                      }`}
-                                    >
-                                      {artist}
-                                    </div>
-                                  </div>
-                                  {isAlreadyAdded && (
-                                    <span className="text-xs text-green-400">
-                                      Added
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })
-                          ) : (
-                            <div className="flex flex-col items-center justify-center py-8 text-center">
-                              <span className="text-white text-sm mb-2">
-                                No artists found
-                              </span>
-                              <span className="text-gray-400 text-xs">
-                                {allArtists.length === 0
-                                  ? "Failed to load artists from API"
-                                  : "Try adjusting your search"}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Add to Source Button */}
-                        <div className="flex justify-between items-center pt-4">
-                          <div className="text-sm text-gray-400">
-                            {tempSelectedArtists.length > 0 && (
-                              <span>
-                                {tempSelectedArtists.length} artist
-                                {tempSelectedArtists.length !== 1
-                                  ? "s"
-                                  : ""}{" "}
-                                selected
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setTempSelectedArtists([]);
-                                setIsRosterDialogOpen(false);
-                              }}
-                              className="px-6"
-                            >
-                              Cancel
-                            </Button>
-                            <Button
-                              className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
-                              onClick={handleAddSelectedArtists}
-                              disabled={
-                                tempSelectedArtists.length === 0 ||
-                                addArtistMutation.isPending
-                              }
-                            >
-                              {addArtistMutation.isPending ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                  Adding...
-                                </>
-                              ) : (
-                                <>
-                                  Add To Source{" "}
-                                  {tempSelectedArtists.length > 0 &&
-                                    `(${tempSelectedArtists.length})`}
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                    {isSelectingArtists ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
 
                 <div className="space-y-2">
-                  {isLoadingSelectedArtists ? (
+                  {isLoadingSelected ? (
                     <div className="flex items-center justify-center py-4">
                       <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                       <span className="ml-2 text-sm text-muted-foreground">
-                        Loading artists...
+                        Loading rosters...
                       </span>
                     </div>
-                  ) : selectedArtists.length > 0 ? (
-                    selectedArtists.map((artist, index) => (
+                  ) : chatSelectedArtists.length > 0 ? (
+                    chatSelectedArtists.map((artist, index) => (
                       <div
                         key={index}
                         className="flex items-center justify-between py-2 px-4 bg-secondary/30 rounded-full hover:bg-secondary/50 transition-colors cursor-pointer"
@@ -893,17 +835,22 @@ const ChatPage = () => {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6 text-red-500 hover:text-red-700"
-                          onClick={() => handleRemoveArtist(artist)}
-                          disabled={deleteArtistMutation.isPending}
+                          onClick={() => handleRemoveRosterArtist(artist)}
+                          disabled={isDeselectingArtist}
                         >
-                          ×
+                          {isDeselectingArtist ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "×"
+                          )}
                         </Button>
                       </div>
                     ))
                   ) : (
                     <div className="text-center py-4 text-muted-foreground text-sm">
-                      No artists selected. Click + to add artists to your
-                      roster.
+                      {currentSessionId
+                        ? "No artists selected for this chat"
+                        : "Select a chat session to manage rosters"}
                     </div>
                   )}
                 </div>
@@ -922,40 +869,72 @@ const ChatPage = () => {
                     variant="outline"
                     size="icon"
                     className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                    onClick={handleCreateNewSession}
+                    disabled={isStartingSession}
                   >
-                    <Plus className="h-4 w-4" />
+                    {isStartingSession ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  {recentChats.map((chat) => (
-                    <div
-                      key={chat.id}
-                      className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group"
-                      onClick={() => handleSelectChat(chat.id)}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">
-                          {chat.firstMessage}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0 "
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteChatDialog({
-                            isOpen: true,
-                            chatId: chat.id,
-                            chatTitle: chat.firstMessage,
-                          });
-                        }}
-                      >
-                        <X className="h-3 w-3 text-white" />
-                      </Button>
+                  {isLoadingSessions ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">
+                        Loading chats...
+                      </span>
                     </div>
-                  ))}
+                  ) : chatSessions.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      No chat sessions yet. Click + to create your first chat.
+                    </div>
+                  ) : (
+                    chatSessions.map((session) => (
+                      <div
+                        key={session.session_id}
+                        className={`flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group ${
+                          currentSessionId === session.session_id
+                            ? "bg-primary/20 border-primary/30"
+                            : "bg-secondary/30"
+                        }`}
+                        onClick={() =>
+                          handleLoadChatSession(session.session_id)
+                        }
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-foreground truncate">
+                            {session.preview || "New chat session"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(session.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSession(
+                              session.session_id,
+                              session.preview
+                            );
+                          }}
+                          disabled={isEndingSession}
+                        >
+                          {isEndingSession ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <X className="h-3 w-3 text-white" />
+                          )}
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -1081,44 +1060,78 @@ const ChatPage = () => {
                     <h2 className="text-lg font-semibold text-foreground">
                       Recent Chats
                     </h2>
-
+                    {/* Create New Chat Button */}
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                      onClick={handleCreateNewSession}
+                      disabled={isStartingSession}
                     >
-                      <Plus className="h-4 w-4" />
+                      {isStartingSession ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Plus className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    {recentChats.map((chat) => (
-                      <div
-                        key={chat.id}
-                        className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group"
-                        onClick={() => handleSelectChat(chat.id)}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-foreground truncate">
-                            {chat.firstMessage}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmDeleteChatDialog({
-                              isOpen: true,
-                              chatId: chat.id,
-                              chatTitle: chat.firstMessage,
-                            });
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
+                    {isLoadingSessions ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <span className="text-sm text-muted-foreground">
+                          Loading chats...
+                        </span>
                       </div>
-                    ))}
+                    ) : chatSessions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No chat sessions yet. Click + to create your first chat.
+                      </div>
+                    ) : (
+                      chatSessions.map((session) => (
+                        <div
+                          key={session.session_id}
+                          className={`flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group ${
+                            currentSessionId === session.session_id
+                              ? "bg-primary/20 border-primary/30"
+                              : "bg-secondary/30"
+                          }`}
+                          onClick={() =>
+                            handleLoadChatSession(session.session_id)
+                          }
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-foreground truncate">
+                              {session.preview || "New chat session"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(
+                                session.created_at
+                              ).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSession(
+                                session.session_id,
+                                session.preview
+                              );
+                            }}
+                            disabled={isEndingSession}
+                          >
+                            {isEndingSession ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -1330,8 +1343,6 @@ const ChatPage = () => {
       </div>
 
       {/* Desktop: Center Panel - Chat */}
-
-      {/* Desktop: Center Panel - Chat */}
       <div className="hidden lg:flex flex-1 flex-col bg-background border border-border rounded-lg  overflow-hidden min-w-0">
         {/* Chat Header */}
         {/* <div className="p-4 border-b border-border">
@@ -1526,7 +1537,6 @@ const ChatPage = () => {
                       </Popover>
                     )}
                   </div>
-                  {/* Selected Generate Items Badges */}
 
                   {/* Right side buttons */}
                   <div className="flex items-center space-x-1">
@@ -1614,6 +1624,271 @@ const ChatPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Session Confirmation Dialog */}
+      <Dialog
+        open={confirmDeleteSessionDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCancelDeleteSession();
+        }}
+      >
+        <DialogContent className="bg-[#222C41] border-none text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Delete Chat Session
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Are you sure you want to delete this chat session? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="bg-[#151E31] rounded-lg p-3">
+              <p className="text-sm text-gray-300 truncate">
+                {confirmDeleteSessionDialog.preview || "Chat session"}
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelDeleteSession}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDeleteSession}
+              disabled={isEndingSession}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isEndingSession ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Roster Dialog */}
+      <Dialog
+        open={isAddRosterDialogOpen}
+        onOpenChange={setIsAddRosterDialogOpen}
+      >
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+          {/* Header with Bot Lion */}
+          <div className="flex items-center justify-center flex-col relative overflow-hidden bg-[#293650] rounded-t-3xl">
+            <Image
+              src="/svgs/Bot-Lion.svg"
+              alt="Bot Lion"
+              width={110}
+              height={100}
+              className="object-contain absolute -top-1"
+            />
+            <Separator className="mt-15 z-50" />
+          </div>
+
+          <div className="px-8 pb-4 text-start">
+            <h2 className="text-2xl font-semibold text-white mb-2">
+              Add Artists to Chat
+            </h2>
+            <p className="text-gray-300 text-sm">
+              Select artists from your roster to add to this chat session.
+            </p>
+          </div>
+
+          {/* Artists List */}
+          <div className="px-8 pb-4">
+            <div className="max-h-60 overflow-y-auto space-y-2 scrollbar-hide">
+              {isLoadingRoster ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  <span className="ml-2 text-white">
+                    Loading your artists...
+                  </span>
+                </div>
+              ) : userRoster.length > 0 ? (
+                userRoster.map((artist, index) => {
+                  const isSelected = tempSelectedRosterArtists.some(
+                    (a) => a.id === artist.id
+                  );
+                  const isAlreadyInChat = chatSelectedArtists.includes(
+                    artist.name
+                  );
+
+                  return (
+                    <div
+                      key={index}
+                      className={`flex items-center justify-between p-3 rounded-lg transition-colors cursor-pointer ${
+                        isAlreadyInChat
+                          ? "bg-green-600/20 border border-green-600/30"
+                          : isSelected
+                          ? "bg-primary/20 border border-primary/30"
+                          : "bg-[#4A5A6C] hover:bg-[#5A6A7C]"
+                      }`}
+                      onClick={() =>
+                        !isAlreadyInChat && handleToggleRosterArtist(artist)
+                      }
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                            isAlreadyInChat
+                              ? "bg-green-600 border-green-600"
+                              : isSelected
+                              ? "bg-primary border-primary"
+                              : "border-white"
+                          }`}
+                        >
+                          {(isSelected || isAlreadyInChat) && (
+                            <svg
+                              className="w-3 h-3 text-white"
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={artist.picture_url || "/api/placeholder/32/32"}
+                            alt={artist.name}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-white">
+                              {artist.name}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {artist.country} •{" "}
+                              {artist.listenership.toLocaleString()} listeners
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {isAlreadyInChat && (
+                        <span className="text-xs text-green-400">In Chat</span>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <span className="text-white text-sm mb-2">
+                    No artists in your roster
+                  </span>
+                  <span className="text-gray-400 text-xs">
+                    Add artists to your roster in the My Artists page first.
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Add to Chat Button */}
+          <div className="flex justify-between items-center px-8 pb-6">
+            <div className="text-sm text-gray-400">
+              {tempSelectedRosterArtists.length > 0 && (
+                <span>
+                  {tempSelectedRosterArtists.length} artist
+                  {tempSelectedRosterArtists.length !== 1 ? "s" : ""} selected
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setTempSelectedRosterArtists([]);
+                  setIsAddRosterDialogOpen(false);
+                }}
+                className="px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#E55351] hover:bg-[#E55351]/90 text-white px-8"
+                onClick={handleAddRosterArtists}
+                disabled={
+                  tempSelectedRosterArtists.length === 0 || isSelectingArtists
+                }
+              >
+                {isSelectingArtists ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    Add to Chat{" "}
+                    {tempSelectedRosterArtists.length > 0 &&
+                      `(${tempSelectedRosterArtists.length})`}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Roster Confirmation Dialog */}
+      <Dialog
+        open={confirmRemoveRosterDialog.isOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCancelRemoveRosterArtist();
+        }}
+      >
+        <DialogContent className="bg-[#222C41] border-none text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Remove Artist from Chat
+            </DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Are you sure you want to remove{" "}
+              <span className="font-semibold">
+                {confirmRemoveRosterDialog.artistName}
+              </span>{" "}
+              from this chat session?
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelRemoveRosterArtist}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmRemoveRosterArtist}
+              disabled={isDeselectingArtist}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeselectingArtist ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Removing...
+                </>
+              ) : (
+                "Remove Artist"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Google Drive Connector Dialog */}
       <GoogleDriveConnector
         isOpen={isGoogleDriveDialogOpen}
@@ -1683,53 +1958,6 @@ const ChatPage = () => {
                 onClick={() => setIsLiveChatDialogOpen(false)}
               >
                 <X className="h-8 w-8" />
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Chat Confirmation Dialog */}
-      <Dialog
-        open={confirmDeleteChatDialog.isOpen}
-        onOpenChange={(open) =>
-          !open &&
-          setConfirmDeleteChatDialog({
-            isOpen: false,
-            chatId: 0,
-            chatTitle: "",
-          })
-        }
-      >
-        <DialogContent className="max-w-md">
-          <div className="p-6">
-            {/* <h2 className="text-lg font-semibold text-foreground mb-4">
-              Delete Chat
-            </h2> */}
-            <p className="text-sm text-muted-foreground mb-6">
-              Are you sure you want to delete this chat?
-            </p>
-
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setConfirmDeleteChatDialog({
-                    isOpen: false,
-                    chatId: 0,
-                    chatTitle: "",
-                  })
-                }
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => handleDeleteChat(confirmDeleteChatDialog.chatId)}
-                className="flex-1"
-              >
-                Delete
               </Button>
             </div>
           </div>
