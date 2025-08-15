@@ -3,7 +3,13 @@
 import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs-primary";
+
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -152,7 +158,7 @@ const ProfilePage = () => {
   ];
 
   return (
-    <div className="min-h-screen text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-[#222C41] text-white p-4 sm:p-4 lg:p-4 rounded-2xl border border-[#FFFFFF3B]">
       {/* Bot Lion Header - Hidden on mobile, visible on lg+ */}
       <div className="hidden lg:flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
         <Image

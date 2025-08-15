@@ -16,7 +16,7 @@ export default function HelpPage() {
   };
 
   return (
-    <div className="min-h-screen text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-[#222C41] text-white p-4 sm:p-4 lg:p-4 rounded-2xl border border-[#FFFFFF3B]">
       {/* Bot Lion Header - Hidden on mobile, visible on lg+ */}
       <div className="hidden lg:flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
         <Image

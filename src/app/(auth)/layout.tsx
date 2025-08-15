@@ -8,7 +8,7 @@ interface AuthLayoutProps {
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <RouteGuard requireAuth={false}>
-      <div className="min-h-screen bg-background p-10">{children}</div>
+      <div className="min-h-screen bg-background">{children}</div>
     </RouteGuard>
   );
 }

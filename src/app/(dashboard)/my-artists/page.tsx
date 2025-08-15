@@ -141,7 +141,7 @@ export default function MyArtistsPage() {
   const artists = userRoster;
 
   return (
-    <div className="min-h-screen text-white p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-[#222C41] text-white p-4 sm:p-4 lg:p-4 rounded-2xl border border-[#FFFFFF3B]">
       {/* Bot Lion Header - Hidden on mobile, visible on lg+ */}
       <div className="hidden lg:flex items-center justify-center flex-col relative overflow-hidden bg-background rounded-t-3xl">
         <Image
@@ -154,7 +154,7 @@ export default function MyArtistsPage() {
         <Separator className="mt-15 z-50" />
       </div>
 
-      <div className="w-full p-4 sm:p-8 lg:p-16 bg-background rounded-3xl lg:rounded-t-none lg:rounded-b-3xl">
+      <div className="w-full p-4 bg-background rounded-3xl lg:rounded-t-none lg:rounded-b-3xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-2 sm:p-4 rounded-lg">
           <div className="flex items-center gap-2 sm:gap-3">
@@ -317,7 +317,7 @@ export default function MyArtistsPage() {
         </div>
 
         {/* Desktop Table View (lg and above) */}
-        <div className="hidden lg:block rounded-lg overflow-hidden">
+        <div className="hidden lg:block  overflow-hidden">
           {isLoadingRoster ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-white" />
@@ -325,9 +325,9 @@ export default function MyArtistsPage() {
             </div>
           ) : artists.length > 0 ? (
             <Table>
-              <TableHeader>
-                <TableRow className="bg-[#222C41] border-none rounded-2xl overflow-hidden">
-                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+              <TableHeader className="[&_tr]:border-0">
+                <TableRow className="bg-[#222C41] border-none overflow-hidden rounded-2xl">
+                  <TableHead className="text-gray-300 font-medium py-4 px-6 rounded-l-2xl">
                     ARTIST NAME
                   </TableHead>
                   <TableHead className="text-gray-300 font-medium py-4 px-6">
@@ -343,7 +343,7 @@ export default function MyArtistsPage() {
                       MASTER | PUBLISHING
                     </span>
                   </TableHead>
-                  <TableHead className="text-gray-300 font-medium py-4 px-6">
+                  <TableHead className="text-gray-300 font-medium py-4 px-6 rounded-r-2xl">
                     ACTIONS
                   </TableHead>
                 </TableRow>
