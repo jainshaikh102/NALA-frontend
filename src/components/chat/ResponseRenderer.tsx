@@ -71,6 +71,51 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           return <TextDisplay content={data as string} />;
         case "error":
           return <ErrorDisplay content={data as string} />;
+        case "image_base64":
+          return (
+            <div className="w-full">
+              {data && typeof data === "string" ? (
+                <img
+                  src={`data:image/png;base64,${data}`}
+                  alt="Generated content"
+                  className="max-w-full h-auto rounded-lg border"
+                  onError={(e) => {
+                    console.error("Failed to load base64 image");
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div className="p-4 bg-muted/30 rounded border-dashed border-2">
+                  <p className="text-sm text-muted-foreground">
+                    Invalid or missing image data
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        case "video_url":
+          return (
+            <div className="w-full">
+              {data && typeof data === "string" ? (
+                <video
+                  src={data}
+                  controls
+                  className="max-w-full h-auto rounded-lg border"
+                  onError={(e) => {
+                    console.error("Failed to load video from URL:", data);
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <div className="p-4 bg-muted/30 rounded border-dashed border-2">
+                  <p className="text-sm text-muted-foreground">
+                    Invalid or missing video URL
+                  </p>
+                </div>
+              )}
+            </div>
+          );
         default:
           return (
             <div className="p-4 bg-muted/30 rounded">
@@ -208,6 +253,62 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
 
       case "error":
         return <ErrorDisplay content={answerStr} />;
+
+      case "image_base64":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData && typeof displayData === "string" ? (
+              <div className="w-full">
+                <img
+                  src={`data:image/png;base64,${displayData}`}
+                  alt="Generated content"
+                  className="max-w-full h-auto rounded-lg border"
+                  onError={(e) => {
+                    console.error("Failed to load base64 image");
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/30 rounded border-dashed border-2">
+                <p className="text-sm text-muted-foreground">
+                  Invalid or missing image data
+                </p>
+              </div>
+            )}
+          </div>
+        );
+
+      case "video_url":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData && typeof displayData === "string" ? (
+              <div className="w-full">
+                <video
+                  src={displayData}
+                  controls
+                  className="max-w-full h-auto rounded-lg border"
+                  onError={(e) => {
+                    console.error(
+                      "Failed to load video from URL:",
+                      displayData
+                    );
+                  }}
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            ) : (
+              <div className="p-4 bg-muted/30 rounded border-dashed border-2">
+                <p className="text-sm text-muted-foreground">
+                  Invalid or missing video URL
+                </p>
+              </div>
+            )}
+          </div>
+        );
 
       case "dataframe":
         return (
