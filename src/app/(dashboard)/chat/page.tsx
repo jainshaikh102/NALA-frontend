@@ -29,7 +29,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs-primary";
+import {
+  TabsBB,
+  TabsContentBB,
+  TabsListBB,
+  TabsTriggerBB,
+} from "@/components/ui/tabs-primary-border-bottom";
 import {
   Popover,
   PopoverContent,
@@ -573,9 +584,9 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-screen bg-secondary flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
+    <div className="h-screen bg-[#222C41] flex flex-col lg:flex-row gap-4 p-4 sm:p-4 lg:p-4 overflow-hidden rounded-2xl border border-[#FFFFFF3B]">
       {/* Desktop: Left Panel - Sources, Rosters, Queries */}
-      <div className="hidden lg:block w-80 transition-all duration-300 ease-in-out bg-background border border-border rounded-lg overflow-auto scrollbar-hide flex-shrink-0">
+      <div className="hidden lg:block w-80 transition-all duration-300 ease-in-out bg-background rounded-lg overflow-auto scrollbar-hide flex-shrink-0">
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="p-4 border-b border-border">
@@ -943,20 +954,20 @@ const ChatPage = () => {
       </div>
 
       {/* Mobile/Tablet: Combined Container with Tabs */}
-      <div className="flex-1 lg:hidden flex flex-col bg-background border border-border rounded-lg overflow-hidden">
-        <Tabs defaultValue="chat" className="flex-1 flex flex-col">
+      <div className="flex-1 lg:hidden flex flex-col bg-background rounded-lg overflow-hidden">
+        <TabsBB defaultValue="chat" className="flex-1 flex flex-col">
           <div className="p-4 border-b border-border">
-            <TabsList className="w-full">
-              <TabsTrigger value="sources" className="flex-1">
+            <TabsListBB className="w-full">
+              <TabsTriggerBB value="sources" className="flex-1">
                 Sources
-              </TabsTrigger>
-              <TabsTrigger value="chat" className="flex-1">
+              </TabsTriggerBB>
+              <TabsTriggerBB value="chat" className="flex-1">
                 Chat
-              </TabsTrigger>
-            </TabsList>
+              </TabsTriggerBB>
+            </TabsListBB>
           </div>
 
-          <TabsContent value="sources" className="flex-1 overflow-auto">
+          <TabsContentBB value="sources" className="flex-1 overflow-auto">
             {/* Mobile Sources Content with Nested Tabs */}
             <Tabs defaultValue="sources" className="flex-1 flex flex-col">
               <div className="p-4 border-b border-border">
@@ -1136,9 +1147,9 @@ const ChatPage = () => {
                 </div>
               </TabsContent>
             </Tabs>
-          </TabsContent>
+          </TabsContentBB>
 
-          <TabsContent value="chat" className="flex-1 flex flex-col">
+          <TabsContentBB value="chat" className="flex-1 flex flex-col">
             {/* Mobile Chat Content */}
             <div className="flex-1 overflow-auto p-4 relative">
               <div className="space-y-4">
@@ -1338,20 +1349,14 @@ const ChatPage = () => {
                 </form>
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </TabsContentBB>
+        </TabsBB>
       </div>
 
       {/* Desktop: Center Panel - Chat */}
-      <div className="hidden lg:flex flex-1 flex-col bg-background border border-border rounded-lg  overflow-hidden min-w-0">
+      <div className="hidden lg:flex flex-1 flex-col bg-background  rounded-lg  overflow-hidden min-w-0">
         {/* Chat Header */}
-        {/* <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-foreground">Chat</h1>
-            </div>
-          </div>
-        </div> */}
+
         <div className="flex items-center justify-center flex-col relative overflow-hidden bg-transparent rounded-t-lg">
           <h3 className="absolute top-1/2 left-12 transform -translate-x-1/2 -translate-y-1/2 text-xl font-semibold text-foreground">
             Chat

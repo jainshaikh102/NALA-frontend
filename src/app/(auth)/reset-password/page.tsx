@@ -9,6 +9,7 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import { useResetPassword } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -117,33 +118,50 @@ function ResetPasswordContent() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Password Field */}
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  New Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    {...register("new_password")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter new password"
-                    className={`pl-10 pr-10 bg-input border-border ${
-                      errors.new_password
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
+                <div
+                  className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                    errors.new_password
+                      ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                      : "focus-within:ring-2 focus-within:ring-primary"
+                  }`}
+                >
+                  {/* Icon */}
+                  <Lock className="text-primary h-5 w-5" />
+
+                  {/* Divider */}
+                  <div className="w-px h-8 bg-primary"></div>
+
+                  {/* Label + Input */}
+                  <div className="flex flex-col flex-1 justify-center">
+                    <Label
+                      htmlFor="new_password"
+                      className="text-sm text-muted-foreground px-2"
+                    >
+                      New Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="new_password"
+                        {...register("new_password")}
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter new password"
+                        className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
                 {errors.new_password && (
                   <p className="text-sm text-destructive">
                     {errors.new_password.message}
@@ -153,33 +171,52 @@ function ResetPasswordContent() {
 
               {/* Confirm Password Field */}
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Confirm New Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    {...register("confirm_new_password")}
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm new password"
-                    className={`pl-10 pr-10 bg-input border-border ${
-                      errors.confirm_new_password
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
+                <div
+                  className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                    errors.confirm_new_password
+                      ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                      : "focus-within:ring-2 focus-within:ring-primary"
+                  }`}
+                >
+                  {/* Icon */}
+                  <Lock className="text-primary h-5 w-5" />
+
+                  {/* Divider */}
+                  <div className="w-px h-8 bg-primary"></div>
+
+                  {/* Label + Input */}
+                  <div className="flex flex-col flex-1 justify-center">
+                    <Label
+                      htmlFor="confirm_new_password"
+                      className="text-sm text-muted-foreground px-2"
+                    >
+                      Confirm New Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="confirm_new_password"
+                        {...register("confirm_new_password")}
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm new password"
+                        className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2 pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
+
                 {errors.confirm_new_password && (
                   <p className="text-sm text-destructive">
                     {errors.confirm_new_password.message}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -44,6 +44,8 @@ const navigation: NavigationItem[] = [
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+    isSpecial: true,
+    specialIcon: "/svgs/Dashboard-WhiteIcon.svg",
   },
   {
     name: "Chat",
@@ -56,26 +58,21 @@ const navigation: NavigationItem[] = [
     name: "Artist Roaster",
     href: "/my-artists",
     icon: Users,
+    isSpecial: true,
+    specialIcon: "/svgs/UserMusic-Icon.svg",
   },
-  {
-    name: "Profile",
-    href: "/profile",
-    icon: User,
-  },
-  // {
-  //   name: "Notifications",
-  //   href: "/notifications",
-  //   icon: Bell,
-  // },
   {
     name: "Help",
     href: "/help",
     icon: HelpCircle,
+    isSpecial: true,
+    specialIcon: "/svgs/Info-WhiteIcon.svg",
   },
 ];
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { logout } = useLogout();
   const { user } = useAuthStore();
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
@@ -147,18 +144,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Image
                   src={item.specialIcon}
                   alt={item.name}
-                  width={20}
-                  height={20}
-                  className={isActive ? "opacity-100" : "opacity-70"}
+                  width={28}
+                  height={28}
+                  // className={isActive ? "opacity-100" : "opacity-70"}
                 />
               ) : (
-                <IconComponent className="w-5 h-5" />
+                <IconComponent className="w-7 h-7" />
               )}
-
-              {/* Tooltip */}
-              {/* <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-                {item.name}
-              </div> */}
             </Link>
           );
         })}
@@ -167,31 +159,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* User Profile */}
       <div className="p-4 flex flex-col items-center space-y-4">
         {/* User Avatar */}
-        <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center group relative">
+        <div
+          className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center group relative cursor-pointer hover:bg-gray-300 transition-colors duration-200"
+          onClick={() => {
+            router.push("/profile");
+            onClose();
+          }}
+        >
           <User className="w-5 h-5 text-white" />
-
-          {/* User Info Tooltip */}
-          {/* {user && (
-            <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-              <div className="font-medium">
-                {user.full_name || user.username || "User"}
-              </div>
-              <div className="text-gray-300">{user.email}</div>
-            </div>
-          )} */}
         </div>
 
-        {/* Logout */}
         <button
           onClick={handleLogoutClick}
           className="w-12 h-12 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 group relative"
         >
           <LogOut className="w-5 h-5" />
-
-          {/* Tooltip */}
-          {/* <div className="absolute left-16 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-            Logout
-          </div> */}
         </button>
       </div>
 

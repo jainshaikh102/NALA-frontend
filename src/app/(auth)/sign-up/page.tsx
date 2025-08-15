@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useRegister } from "@/hooks/use-auth";
 
@@ -101,22 +102,37 @@ export default function SignUpPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Full Name Field */}
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    {...register("full_name")}
-                    type="text"
-                    placeholder="John Doe"
-                    className={`pl-10 bg-input border-border ${
-                      errors.full_name
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    }`}
-                  />
+                <div
+                  className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                    errors.full_name
+                      ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                      : "focus-within:ring-2 focus-within:ring-primary"
+                  }`}
+                >
+                  {/* Icon */}
+                  <User className="text-primary h-5 w-5" />
+
+                  {/* Divider */}
+                  <div className="w-px h-8 bg-primary"></div>
+
+                  {/* Label + Input */}
+                  <div className="flex flex-col flex-1 justify-center">
+                    <Label
+                      htmlFor="full_name"
+                      className="text-sm text-muted-foreground px-2"
+                    >
+                      Full Name
+                    </Label>
+                    <Input
+                      id="full_name"
+                      {...register("full_name")}
+                      type="text"
+                      placeholder="John Doe"
+                      className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2"
+                    />
+                  </div>
                 </div>
+
                 {errors.full_name && (
                   <p className="text-sm text-destructive">
                     {errors.full_name.message}
@@ -126,22 +142,37 @@ export default function SignUpPage() {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    {...register("email")}
-                    type="email"
-                    placeholder="username@gmail.com"
-                    className={`pl-10 bg-input border-border ${
-                      errors.email
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    }`}
-                  />
+                <div
+                  className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                    errors.email
+                      ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                      : "focus-within:ring-2 focus-within:ring-primary"
+                  }`}
+                >
+                  {/* Icon */}
+                  <Mail className="text-primary h-5 w-5" />
+
+                  {/* Divider */}
+                  <div className="w-px h-8 bg-primary"></div>
+
+                  {/* Label + Input */}
+                  <div className="flex flex-col flex-1 justify-center">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm text-muted-foreground px-2"
+                    >
+                      Email Address / Username
+                    </Label>
+                    <Input
+                      id="email"
+                      {...register("email")}
+                      type="email"
+                      placeholder="username@gmail.com"
+                      className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2"
+                    />
+                  </div>
                 </div>
+
                 {errors.email && (
                   <p className="text-sm text-destructive">
                     {errors.email.message}
@@ -153,33 +184,50 @@ export default function SignUpPage() {
               <div className="grid grid-cols-2 gap-4">
                 {/* Password Field */}
                 <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      {...register("password")}
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Password"
-                      className={`pl-10 pr-10 bg-input border-border ${
-                        errors.password
-                          ? "border-destructive focus-visible:ring-destructive"
-                          : ""
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
+                  <div
+                    className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                      errors.password
+                        ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                        : "focus-within:ring-2 focus-within:ring-primary"
+                    }`}
+                  >
+                    {/* Icon */}
+                    <Lock className="text-primary h-5 w-5" />
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-primary"></div>
+
+                    {/* Label + Input */}
+                    <div className="flex flex-col flex-1 justify-center">
+                      <Label
+                        htmlFor="password"
+                        className="text-sm text-muted-foreground px-2"
+                      >
+                        Password
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          {...register("password")}
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Password"
+                          className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
+
                   {errors.password && (
                     <p className="text-sm text-destructive">
                       {errors.password.message}
@@ -189,35 +237,52 @@ export default function SignUpPage() {
 
                 {/* Confirm Password Field */}
                 <div className="space-y-2">
-                  <label className="text-sm text-muted-foreground">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      {...register("confirmPassword")}
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm Password"
-                      className={`pl-10 pr-10 bg-input border-border ${
-                        errors.confirmPassword
-                          ? "border-destructive focus-visible:ring-destructive"
-                          : ""
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
+                  <div
+                    className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                      errors.confirmPassword
+                        ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                        : "focus-within:ring-2 focus-within:ring-primary"
+                    }`}
+                  >
+                    {/* Icon */}
+                    <Lock className="text-primary h-5 w-5" />
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-primary"></div>
+
+                    {/* Label + Input */}
+                    <div className="flex flex-col flex-1 justify-center">
+                      <Label
+                        htmlFor="confirmPassword"
+                        className="text-sm text-muted-foreground px-2"
+                      >
+                        Confirm Password
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          {...register("confirmPassword")}
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm Password"
+                          className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2 pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
+
                   {errors.confirmPassword && (
                     <p className="text-sm text-destructive">
                       {errors.confirmPassword.message}
@@ -325,8 +390,8 @@ export default function SignUpPage() {
             <Image
               src="/svgs/Bot-Lion.svg"
               alt="Nala Mascot"
-              width={400}
-              height={400}
+              width={550}
+              height={550}
               className="object-contain"
             />
           </div>

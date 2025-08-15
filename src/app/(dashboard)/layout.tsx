@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen bg-secondary">
+      <div className="min-h-screen bg-background p-4 rounded-4xl">
         {/* Mobile Overlay - Only show when sidebar is open on mobile */}
         {sidebarOpen && (
           <div
@@ -66,7 +66,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           {/* Content with proper spacing for mobile menu button */}
-          <div className="pt-16 lg:pt-0">{children}</div>
+          <div className="pt-0 lg:pt-0">{children}</div>
         </main>
       </div>
     </RouteGuard>

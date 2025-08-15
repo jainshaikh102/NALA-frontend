@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Mail } from "lucide-react";
 import { useForgotPassword } from "@/hooks/use-auth";
 
@@ -73,22 +74,37 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               {/* Email Field */}
               <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    {...register("email")}
-                    type="email"
-                    placeholder="username@gmail.com"
-                    className={`pl-10 bg-input border-border ${
-                      errors.email
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    }`}
-                  />
+                <div
+                  className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                    errors.email
+                      ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                      : "focus-within:ring-2 focus-within:ring-primary"
+                  }`}
+                >
+                  {/* Icon */}
+                  <Mail className="text-primary h-5 w-5" />
+
+                  {/* Divider */}
+                  <div className="w-px h-8 bg-primary"></div>
+
+                  {/* Label + Input */}
+                  <div className="flex flex-col flex-1 justify-center">
+                    <Label
+                      htmlFor="email"
+                      className="text-sm text-muted-foreground px-2"
+                    >
+                      Email Address / Username
+                    </Label>
+                    <Input
+                      id="email"
+                      {...register("email")}
+                      type="email"
+                      placeholder="username@gmail.com"
+                      className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2"
+                    />
+                  </div>
                 </div>
+
                 {errors.email && (
                   <p className="text-sm text-destructive">
                     {errors.email.message}
@@ -129,8 +145,8 @@ export default function ForgotPasswordPage() {
             <Image
               src="/svgs/Bot-Lion.svg"
               alt="Nala Mascot"
-              width={400}
-              height={400}
+              width={550}
+              height={550}
               className="object-contain"
             />
           </div>
