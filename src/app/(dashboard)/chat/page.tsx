@@ -49,7 +49,7 @@ import {
 import { useAuthStore } from "@/store/auth-store";
 import { useGet, usePost } from "@/hooks/use-api";
 import { GoogleDriveConnector } from "@/components/sources/google-drive-connector";
-import { Badge } from "@/components/ui/badge";
+
 import {
   useChatSessions,
   useChatHistory,
@@ -58,6 +58,9 @@ import {
 } from "@/hooks/use-chat-sessions";
 import { useChatRoster } from "@/hooks/use-chat-roster";
 import { useUserRoster, type Artist } from "@/hooks/use-artists";
+import { useImageGeneration, useVideoGeneration } from "@/hooks/use-generation";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface ChatMessage {
   id: number;
@@ -115,6 +118,20 @@ const ChatPage = () => {
     artistName: string;
   }>({ isOpen: false, artistName: "" });
 
+  // Generation state
+  const [generationType, setGenerationType] = useState<
+    "none" | "image" | "video"
+  >("none");
+  const [generatedContent, setGeneratedContent] = useState<{
+    type: "image" | "video" | null;
+    content: string;
+    timestamp: Date;
+  } | null>(null);
+
+  // FAQ visibility state - track complete message cycles
+  const [hasCompletedMessageCycle, setHasCompletedMessageCycle] =
+    useState(false);
+
   const { user } = useAuthStore();
 
   // Chat session management hooks
@@ -144,6 +161,49 @@ const ChatPage = () => {
 
   // User roster hook for adding artists to chat
   const { userRoster, isLoadingRoster } = useUserRoster(user?.username);
+
+  // Generation hooks with callbacks to create bot messages
+  const {
+    generateImage,
+    showImage,
+    isGeneratingImage,
+    isShowingImage,
+    generatedImageData,
+    showImageData,
+  } = useImageGeneration((imageData) => {
+    // Create bot message with generated image
+    const botMessage: ChatMessage = {
+      id: Date.now() + 1,
+      type: "bot",
+      content: imageData.message || "Image generated successfully!",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      displayData: imageData.base64_image,
+      dataType: "image_base64",
+    };
+    setMessages((prev) => [...prev, botMessage]);
+    setHasCompletedMessageCycle(true);
+  });
+
+  const { generateVideo, isGeneratingVideo, generatedVideoData } =
+    useVideoGeneration((videoData) => {
+      // Create bot message with generated video
+      const botMessage: ChatMessage = {
+        id: Date.now() + 1,
+        type: "bot",
+        content: `Video generated successfully! Duration: ${videoData.duration}`,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        displayData: videoData.video_url,
+        dataType: "video_url",
+      };
+      setMessages((prev) => [...prev, botMessage]);
+      setHasCompletedMessageCycle(true);
+    });
 
   // Fetch selected artists from API
   const {
@@ -200,6 +260,7 @@ const ChatPage = () => {
     },
   ];
 
+  // FAQ questions
   const preQuestions = [
     { id: 1, query: "Discover Top Performing Tracks" },
     { id: 2, query: "Music Market Trends" },
@@ -267,6 +328,9 @@ const ChatPage = () => {
       };
 
       setMessages((prev) => [...prev, botMessage]);
+
+      // Mark that we've completed a message cycle (user message + bot response)
+      setHasCompletedMessageCycle(true);
     } catch (error) {
       console.error("Error sending message:", error);
       const errorMessage = {
@@ -285,9 +349,71 @@ const ChatPage = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(inputText);
+
+    if (!inputText.trim()) {
+      toast.error("Please enter a message or prompt");
+      return;
+    }
+
+    // Determine generation type based on selected item
+    let generationType: "none" | "image" | "video" = "none";
+    if (selectedGenerateItem === "image") {
+      generationType = "image";
+    } else if (selectedGenerateItem === "video") {
+      generationType = "video";
+    }
+
+    // Handle generation or regular chat
+    if (generationType === "image") {
+      // Add user message to chat for image generation
+      const userMessage: ChatMessage = {
+        id: Date.now(),
+        type: "user",
+        content: inputText,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      // Use callback to ensure proper ordering
+      setMessages((prev) => {
+        const newMessages = [...prev, userMessage];
+        // Trigger image generation after state update
+        setTimeout(() => handleImageGeneration(inputText), 0);
+        return newMessages;
+      });
+
+      setInputText(""); // Clear input after generation
+      setSelectedGenerateItem(null); // Clear selection
+    } else if (generationType === "video") {
+      // Add user message to chat for video generation
+      const userMessage: ChatMessage = {
+        id: Date.now(),
+        type: "user",
+        content: inputText,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      // Use callback to ensure proper ordering
+      setMessages((prev) => {
+        const newMessages = [...prev, userMessage];
+        // Trigger video generation after state update
+        setTimeout(() => handleVideoGeneration(inputText), 0);
+        return newMessages;
+      });
+
+      setInputText(""); // Clear input after generation
+      setSelectedGenerateItem(null); // Clear selection
+    } else {
+      // Default chat behavior
+      sendMessage(inputText);
+    }
   };
 
   // Update selected artists when API data changes
@@ -545,6 +671,70 @@ const ChatPage = () => {
 
   const handleCancelRemoveRosterArtist = () => {
     setConfirmRemoveRosterDialog({ isOpen: false, artistName: "" });
+  };
+
+  // Generation handler functions
+  const handleImageGeneration = async (prompt: string) => {
+    if (!user?.username) {
+      toast.error("Please log in to generate images");
+      return;
+    }
+
+    generateImage({
+      prompt,
+      chat_session_id: currentSessionId || undefined,
+      username: user.username,
+    });
+
+    // Mark complete cycle when image generation is triggered
+    // (the actual completion will be handled by the generation hook)
+    setTimeout(() => {
+      setHasCompletedMessageCycle(true);
+    }, 1000); // Small delay to ensure generation starts
+  };
+
+  const handleVideoGeneration = async (prompt: string) => {
+    if (!user?.username) {
+      toast.error("Please log in to generate videos");
+      return;
+    }
+
+    generateVideo({
+      prompt,
+      duration_seconds: 8,
+      chat_session_id: currentSessionId || undefined,
+      username: user.username,
+    });
+
+    // Mark complete cycle when video generation is triggered
+    // (the actual completion will be handled by the generation hook)
+    setTimeout(() => {
+      setHasCompletedMessageCycle(true);
+    }, 1000); // Small delay to ensure generation starts
+  };
+
+  const handleGenerationSubmit = async (
+    prompt: string,
+    type: "none" | "image" | "video"
+  ) => {
+    if (!prompt.trim()) {
+      toast.error("Please enter a prompt");
+      return;
+    }
+
+    switch (type) {
+      case "image":
+        await handleImageGeneration(prompt);
+        break;
+      case "video":
+        await handleVideoGeneration(prompt);
+        break;
+      case "none":
+      default:
+        // Fall back to default chat behavior
+        handleSubmit(new Event("submit") as any);
+        break;
+    }
   };
 
   // Handle adding generate item (only one at a time)
@@ -1175,8 +1365,9 @@ const ChatPage = () => {
                   </div>
                 ))}
               </div>
-              {/* Pre-question badges - show only when chat is empty */}
-              {messages.length === 0 && (
+
+              {/* Pre-question badges - show only when chat is empty and no complete cycle */}
+              {messages.length === 0 && !hasCompletedMessageCycle && (
                 <div className="absolute bottom-28 left-0 h-20 flex items-center justify-center w-full p-8">
                   <div className="flex items-center justify-center flex-wrap gap-6">
                     {preQuestions.map((question) => (
@@ -1299,7 +1490,9 @@ const ChatPage = () => {
                       placeholder="Ask or search anything..."
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
-                      disabled={isLoading}
+                      disabled={
+                        isLoading || isGeneratingImage || isGeneratingVideo
+                      }
                       className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                     />
 
@@ -1319,10 +1512,14 @@ const ChatPage = () => {
                         <Button
                           type="submit"
                           size="icon"
-                          disabled={isLoading}
+                          disabled={
+                            isLoading || isGeneratingImage || isGeneratingVideo
+                          }
                           className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
                         >
-                          {isLoading ? (
+                          {isLoading ||
+                          isGeneratingImage ||
+                          isGeneratingVideo ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
                           ) : (
                             <Send className="h-4 w-4" />
@@ -1373,6 +1570,35 @@ const ChatPage = () => {
 
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
+          {/* Loading states for generation */}
+          {(isGeneratingImage || isGeneratingVideo) && (
+            <div className="flex justify-start">
+              <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4 max-w-full">
+                <div className="flex items-center space-x-2 mb-3">
+                  <Image
+                    src="/svgs/Golden-Paw.svg"
+                    alt="Paw"
+                    width={16}
+                    height={16}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    {isGeneratingImage
+                      ? "Generating Image..."
+                      : "Generating Video..."}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">
+                    {isGeneratingImage
+                      ? "Creating your image, please wait..."
+                      : "Creating your video, this may take a moment..."}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {messages.map((message) => (
             <div
               key={message.id}
@@ -1414,8 +1640,8 @@ const ChatPage = () => {
             </div>
           ))}
 
-          {/* Pre-question badges - show only when chat is empty */}
-          {messages.length === 0 && (
+          {/* Pre-question badges - show only when chat is empty and no complete cycle */}
+          {messages.length === 0 && !hasCompletedMessageCycle && (
             <div className="absolute bottom-20 left-0 h-20 flex items-center justify-center w-full p-8">
               <div className="flex items-center justify-center flex-wrap gap-6">
                 {preQuestions.map((question) => (
@@ -1444,7 +1670,7 @@ const ChatPage = () => {
                   placeholder="Ask or search anything..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  disabled={isLoading}
+                  disabled={isLoading || isGeneratingImage || isGeneratingVideo}
                   className="flex-1 bg-transparent w-full p-2 border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                 />
                 <div className="flex items-center justify-between w-full space-x-2">
@@ -1559,10 +1785,12 @@ const ChatPage = () => {
                       <Button
                         type="submit"
                         size="icon"
-                        disabled={isLoading}
+                        disabled={
+                          isLoading || isGeneratingImage || isGeneratingVideo
+                        }
                         className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
                       >
-                        {isLoading ? (
+                        {isLoading || isGeneratingImage || isGeneratingVideo ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Send className="h-4 w-4" />
