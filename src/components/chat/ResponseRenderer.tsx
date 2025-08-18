@@ -46,6 +46,21 @@ const isArrayOfDataSections = (displayData: unknown): boolean => {
   return Array.isArray(displayData) && displayData.length > 0;
 };
 
+// Helper function to detect if displayData is a multi-section report array
+const isMultiSectionReportArray = (displayData: unknown): boolean => {
+  return (
+    Array.isArray(displayData) &&
+    displayData.length > 0 &&
+    displayData.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "section_type" in item &&
+        "content" in item
+    )
+  );
+};
+
 export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
   answerStr,
   displayData,
@@ -151,6 +166,18 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           {displayData.sections.map((section, index) =>
             renderDataSection(section.type, section.data, section.title)
           )}
+        </div>
+      );
+    }
+
+    // Check if displayData is a multi-section report array (prioritize this over generic array detection)
+    if (isMultiSectionReportArray(displayData)) {
+      return (
+        <div className="space-y-4">
+          {answerStr ? <TextDisplay content={answerStr} /> : null}
+          <MultiSectionReportDisplay
+            data={{ sections: displayData as any[] }}
+          />
         </div>
       );
     }
@@ -375,7 +402,13 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           <div className="space-y-4">
             {answerStr ? <TextDisplay content={answerStr} /> : null}
             {displayData ? (
-              <MultiSectionReportDisplay data={displayData as any} />
+              <MultiSectionReportDisplay
+                data={
+                  Array.isArray(displayData)
+                    ? { sections: displayData as any[] }
+                    : (displayData as any)
+                }
+              />
             ) : null}
           </div>
         );

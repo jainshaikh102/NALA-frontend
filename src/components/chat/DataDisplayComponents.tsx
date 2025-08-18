@@ -5,6 +5,13 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronDown,
   ChevronUp,
   Search,
@@ -21,8 +28,20 @@ import {
   Music,
   Users,
   Star,
+  BarChart3,
+  Database,
+  Calendar,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { XAxis, YAxis, CartesianGrid, Area, AreaChart } from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
 import {
   Table,
   TableBody,
@@ -34,6 +53,9 @@ import {
 import {
   formatNumber,
   formatNumberCompact,
+  formatCurrencyCompact,
+  formatSmartValue,
+  isEarningsValue,
   convertSnakeCaseToTitleCase,
   parseTimestamp,
   formatTimestamp,
@@ -384,23 +406,28 @@ export const DataFrameDisplay: React.FC<{ data: DataFrameData }> = ({
                       key={rowIndex}
                       className="border-b bg-background hover:bg-muted/30 transition-colors"
                     >
-                      {row.map((cell, cellIndex) => (
-                        <TableCell
-                          key={cellIndex}
-                          className="p-2 whitespace-nowrap min-w-[100px] max-w-[150px] bg-background"
-                          style={{ width: cellIndex === 0 ? "120px" : "100px" }}
-                        >
-                          <div className="truncate" title={String(cell)}>
-                            {cellIndex === 0 ? (
-                              <span className="font-medium">{cell}</span>
-                            ) : (
-                              <span className="text-muted-foreground">
-                                {formatNumber(cell)}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                      ))}
+                      {row.map((cell, cellIndex) => {
+                        const columnName = tableData.columns[cellIndex] || "";
+                        return (
+                          <TableCell
+                            key={cellIndex}
+                            className="p-2 whitespace-nowrap min-w-[100px] max-w-[150px] bg-background"
+                            style={{
+                              width: cellIndex === 0 ? "120px" : "100px",
+                            }}
+                          >
+                            <div className="truncate" title={String(cell)}>
+                              {cellIndex === 0 ? (
+                                <span className="font-medium">{cell}</span>
+                              ) : (
+                                <span className="text-muted-foreground">
+                                  {formatSmartValue(columnName, cell)}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -422,13 +449,19 @@ export const DataFrameDisplay: React.FC<{ data: DataFrameData }> = ({
 
 // Key-Value Display Component (Metrics)
 // Implements specification: responsive grid (5 columns/row), number formatting, snake_case to Title Case
-export const KeyValueDisplay: React.FC<{ data: KeyValueData }> = ({ data }) => {
+export const KeyValueDisplay: React.FC<{
+  data: KeyValueData | any;
+  title?: string;
+  hideTitle?: boolean;
+}> = ({ data, title, hideTitle = false }) => {
+  // Handle both new format with title and legacy format
+  const actualTitle = !hideTitle ? title || (data as any)?.title : null;
+  const metricsData = data.data || data; // Handle both new and legacy data structures
+
   // Validate data structure
   if (!validateDataStructure(data, ["data"]) && !data) {
     return createMalformedDataFallback(data, "KeyValueDisplay");
   }
-
-  const metricsData = data.data || data; // Handle both new and legacy data structures
 
   // Additional validation for metrics data
   if (!metricsData || typeof metricsData !== "object") {
@@ -443,26 +476,39 @@ export const KeyValueDisplay: React.FC<{ data: KeyValueData }> = ({ data }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      {entries.map(([key, value], index) => {
-        const formattedLabel = convertSnakeCaseToTitleCase(key);
-        const formattedValue = formatNumber(value);
+    <div className="space-y-4">
+      {/* Section Title */}
+      {actualTitle && (
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-foreground">
+            {actualTitle}
+          </h3>
+          <div className="h-px bg-border mt-2"></div>
+        </div>
+      )}
 
-        return (
-          <Card key={index}>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-primary">
-                  {formattedValue}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {formattedLabel}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {entries.map(([key, value], index) => {
+          const formattedLabel = convertSnakeCaseToTitleCase(key);
+          const formattedValue = formatSmartValue(key, value);
+
+          return (
+            <Card key={index}>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">
+                    {formattedValue}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {formattedLabel}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -567,7 +613,7 @@ export const ViralityReportDisplay: React.FC<{ data: ViralityReportData }> = ({
               metric.recent_avg !== undefined && (
                 <div>
                   <div className="text-lg font-bold text-orange-600">
-                    {formatNumber(metric.recent_avg)}
+                    {formatSmartValue(key, metric.recent_avg)}
                   </div>
                   <div className="text-xs text-orange-600">
                     Historical data missing
@@ -589,10 +635,12 @@ export const ViralityReportDisplay: React.FC<{ data: ViralityReportData }> = ({
             metric.recent_avg !== undefined) && (
             <div className="mt-2 text-xs text-muted-foreground space-y-1">
               {metric.baseline_avg !== undefined && (
-                <div>Baseline: {formatNumber(metric.baseline_avg)}</div>
+                <div>
+                  Baseline: {formatSmartValue(key, metric.baseline_avg)}
+                </div>
               )}
               {metric.recent_avg !== undefined && (
-                <div>Recent: {formatNumber(metric.recent_avg)}</div>
+                <div>Recent: {formatSmartValue(key, metric.recent_avg)}</div>
               )}
             </div>
           )}
@@ -872,7 +920,8 @@ export const PlaylistRecommendationDisplay: React.FC<{
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium">
-                          {formatNumber(rec.playlist_followers)} followers
+                          {formatNumberCompact(rec.playlist_followers)}{" "}
+                          followers
                         </span>
                       </div>
                     </div>
@@ -963,7 +1012,7 @@ export const PlaylistRecommendationDisplay: React.FC<{
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-primary">
-                {formatNumber(
+                {formatNumberCompact(
                   data.recommendations.reduce(
                     (sum, rec) => sum + rec.playlist_followers,
                     0
@@ -1149,355 +1198,593 @@ export const ForecastChartDisplay: React.FC<{ data: ForecastChartData }> = ({
   data,
 }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState("all");
 
-  // Process and format the data
-  const processedData = useMemo(() => {
-    const historical = data.historical_data?.data || [];
-    const forecast = data.forecast_data?.data || [];
+  // Time period options
+  const timePeriodOptions = [
+    { value: "all", label: "All Time" },
+    { value: "1year", label: "Last Year" },
+    { value: "6months", label: "Last 6 Months" },
+    { value: "3months", label: "Last 3 Months" },
+    { value: "1month", label: "Last Month" },
+    { value: "2weeks", label: "Last 2 Weeks" },
+  ];
 
-    // Convert timestamps and prepare data points
-    const historicalPoints = historical.map(([timestamp, value]) => ({
-      timestamp: new Date(timestamp).toLocaleDateString(),
-      value: typeof value === "number" ? value : parseFloat(String(value)),
-      type: "historical" as const,
-    }));
+  // Function to filter data based on selected period
+  const filterDataByPeriod = (data: any[], period: string) => {
+    if (period === "all") return data;
 
-    const forecastPoints = forecast.map(
-      ([timestamp, value, predLow, predHigh]) => ({
-        timestamp: new Date(timestamp).toLocaleDateString(),
-        value: typeof value === "number" ? value : parseFloat(String(value)),
-        predLow: predLow
-          ? typeof predLow === "number"
-            ? predLow
-            : parseFloat(String(predLow))
-          : undefined,
-        predHigh: predHigh
-          ? typeof predHigh === "number"
-            ? predHigh
-            : parseFloat(String(predHigh))
-          : undefined,
-        type: "forecast" as const,
-      })
-    );
+    const now = new Date();
+    const cutoffDate = new Date();
 
-    // Calculate min/max for scaling
-    const allValues = [
-      ...historicalPoints.map((p) => p.value),
-      ...forecastPoints.map((p) => p.value),
-      ...forecastPoints.filter((p) => p.predLow).map((p) => p.predLow!),
-      ...forecastPoints.filter((p) => p.predHigh).map((p) => p.predHigh!),
-    ].filter((v) => !isNaN(v));
+    switch (period) {
+      case "1year":
+        cutoffDate.setFullYear(now.getFullYear() - 1);
+        break;
+      case "6months":
+        cutoffDate.setMonth(now.getMonth() - 6);
+        break;
+      case "3months":
+        cutoffDate.setMonth(now.getMonth() - 3);
+        break;
+      case "1month":
+        cutoffDate.setMonth(now.getMonth() - 1);
+        break;
+      case "2weeks":
+        cutoffDate.setDate(now.getDate() - 14);
+        break;
+      default:
+        return data;
+    }
 
-    const minValue = Math.min(...allValues);
-    const maxValue = Math.max(...allValues);
-    const range = maxValue - minValue;
-    const padding = range * 0.1;
+    return data.filter((item) => new Date(item.date) >= cutoffDate);
+  };
 
-    return {
-      historical: historicalPoints,
-      forecast: forecastPoints,
-      minValue: minValue - padding,
-      maxValue: maxValue + padding,
-      hasConfidenceInterval: forecastPoints.some(
-        (p) => p.predLow !== undefined && p.predHigh !== undefined
-      ),
-    };
-  }, [data]);
+  // Process historical and forecast data separately using the working logic from test page
+  const { historicalData, forecastData, filteredHistoricalData } =
+    useMemo(() => {
+      // Process historical data
+      const processedHistorical = (data.historical_data?.data || [])
+        .map(([timestamp, value], index) => {
+          const numValue =
+            typeof value === "number" ? value : parseFloat(String(value));
+          return {
+            timestamp: new Date(timestamp).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "2-digit",
+            }),
+            date: new Date(timestamp),
+            value: numValue,
+            formattedValue:
+              numValue >= 1e9
+                ? `${(numValue / 1e9).toFixed(1)}B`
+                : numValue >= 1e6
+                ? `${(numValue / 1e6).toFixed(1)}M`
+                : numValue >= 1e3
+                ? `${(numValue / 1e3).toFixed(1)}K`
+                : numValue.toFixed(0),
+          };
+        })
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // Simple SVG-based chart visualization
-  const renderChart = () => {
-    const chartWidth = 600;
-    const chartHeight = 300;
-    const margin = { top: 20, right: 20, bottom: 40, left: 60 };
-    const plotWidth = chartWidth - margin.left - margin.right;
-    const plotHeight = chartHeight - margin.top - margin.bottom;
+      // Process forecast data using the working logic from test page
+      const processedForecast = (data.forecast_data?.data || [])
+        .map(([timestamp, value, lowerBound, upperBound], index) => {
+          const numValue =
+            typeof value === "number" ? value : parseFloat(String(value));
+          const numLowerBound =
+            typeof lowerBound === "number"
+              ? lowerBound
+              : lowerBound
+              ? parseFloat(String(lowerBound))
+              : null;
+          const numUpperBound =
+            typeof upperBound === "number"
+              ? upperBound
+              : upperBound
+              ? parseFloat(String(upperBound))
+              : null;
 
-    const allPoints = [...processedData.historical, ...processedData.forecast];
-    const xScale = (index: number) =>
-      (index / (allPoints.length - 1)) * plotWidth;
-    const yScale = (value: number) =>
-      plotHeight -
-      ((value - processedData.minValue) /
-        (processedData.maxValue - processedData.minValue)) *
-        plotHeight;
+          return {
+            timestamp: new Date(timestamp).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "2-digit",
+            }),
+            date: new Date(timestamp),
+            value: numValue,
+            forecast_lower_bound: numLowerBound,
+            forecast_upper_bound: numUpperBound,
+            formattedValue:
+              numValue >= 1e9
+                ? `${(numValue / 1e9).toFixed(1)}B`
+                : numValue >= 1e6
+                ? `${(numValue / 1e6).toFixed(1)}M`
+                : numValue >= 1e3
+                ? `${(numValue / 1e3).toFixed(1)}K`
+                : numValue.toFixed(0),
+          };
+        })
+        .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+      // Apply time period filtering to historical data
+      const filteredHistorical = filterDataByPeriod(
+        processedHistorical,
+        selectedPeriod
+      );
+
+      console.log("Historical data points:", processedHistorical.length);
+      console.log(
+        "Filtered historical data points:",
+        filteredHistorical.length
+      );
+      console.log("Forecast data points:", processedForecast.length);
+
+      return {
+        historicalData: processedHistorical,
+        forecastData: processedForecast,
+        filteredHistoricalData: filteredHistorical,
+      };
+    }, [data, selectedPeriod]);
+
+  // Calculate metrics for display using filtered data
+  const historicalAverage =
+    filteredHistoricalData.length > 0
+      ? filteredHistoricalData.reduce((sum, item) => sum + item.value, 0) /
+        filteredHistoricalData.length
+      : 0;
+
+  const forecastAverage =
+    forecastData.length > 0
+      ? forecastData.reduce((sum, item) => sum + item.value, 0) /
+        forecastData.length
+      : 0;
+
+  const hasConfidenceInterval = forecastData.some(
+    (point) =>
+      point.forecast_lower_bound !== null && point.forecast_upper_bound !== null
+  );
+
+  const projectedChange =
+    forecastData.length > 1
+      ? ((forecastData[forecastData.length - 1]?.value -
+          forecastData[0]?.value) /
+          forecastData[0]?.value) *
+        100
+      : 0;
+
+  // Chart configurations using the working logic from test page
+  const historicalChartConfig = {
+    value: {
+      label: data.y_axis_label || "Historical Value",
+      color: "hsl(var(--chart-1))",
+    },
+  } satisfies ChartConfig;
+
+  const forecastChartConfig = {
+    value: {
+      label: "Value",
+      color: "hsl(var(--chart-1))",
+    },
+    forecast_upper_bound: {
+      label: "Upper",
+      color: "hsl(var(--chart-2))",
+    },
+    forecast_lower_bound: {
+      label: "Lower",
+      color: "hsl(var(--chart-3))",
+    },
+  } satisfies ChartConfig;
+
+  // Render historical data chart using the working logic from test page
+  const renderHistoricalChart = () => {
+    if (historicalData.length === 0) return null;
 
     return (
-      <div className="w-full overflow-x-auto">
-        <svg width={chartWidth} height={chartHeight} className="border rounded">
-          {/* Background */}
-          <rect
-            width={chartWidth}
-            height={chartHeight}
-            fill="hsl(var(--background))"
-          />
+      <Card className="border-0 shadow-xl bg-background hover:shadow-2xl transition-all duration-500">
+        <CardHeader className="flex flex-col items-stretch border-b space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/20 rounded-lg">
+                <BarChart3 className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl text-primary">
+                  Historical Data Analysis
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Showing {filteredHistoricalData.length} data points over{" "}
+                  {selectedPeriod === "all"
+                    ? "all time"
+                    : timePeriodOptions
+                        .find((opt) => opt.value === selectedPeriod)
+                        ?.label.toLowerCase()}
+                </p>
+              </div>
+            </div>
 
-          {/* Chart area */}
-          <g transform={`translate(${margin.left}, ${margin.top})`}>
-            {/* Grid lines */}
-            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-              <g key={ratio}>
-                <line
-                  x1={0}
-                  y1={ratio * plotHeight}
-                  x2={plotWidth}
-                  y2={ratio * plotHeight}
-                  stroke="hsl(var(--muted))"
-                  strokeWidth={0.5}
-                />
-              </g>
-            ))}
+            {/* Enhanced Period Selector */}
+            <div className="flex items-center gap-3 bg-background rounded-lg px-4 py-2 border border-primary">
+              <Calendar className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                Time Period:
+              </span>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger className="w-36 border-0 bg-secondary shadow-sm">
+                  <SelectValue placeholder="Select period" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timePeriodOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-            {/* Confidence interval (shaded area) */}
-            {processedData.hasConfidenceInterval && (
-              <path
-                d={
-                  processedData.forecast
-                    .filter(
-                      (p) => p.predLow !== undefined && p.predHigh !== undefined
-                    )
-                    .map((point, index) => {
-                      const x = xScale(processedData.historical.length + index);
-                      const yLow = yScale(point.predLow!);
-                      const yHigh = yScale(point.predHigh!);
-                      return index === 0
-                        ? `M ${x} ${yLow} L ${x} ${yHigh}`
-                        : `L ${x} ${yHigh}`;
-                    })
-                    .join(" ") +
-                  processedData.forecast
-                    .filter(
-                      (p) => p.predLow !== undefined && p.predHigh !== undefined
-                    )
-                    .reverse()
-                    .map((point, index) => {
-                      const x = xScale(
-                        processedData.historical.length +
-                          processedData.forecast.length -
-                          1 -
-                          index
-                      );
-                      const yLow = yScale(point.predLow!);
-                      return `L ${x} ${yLow}`;
-                    })
-                    .join(" ") +
-                  " Z"
-                }
-                fill="hsl(var(--primary))"
-                fillOpacity={0.2}
-              />
-            )}
+          <div className="flex">
+            <div className="flex flex-1 flex-col justify-center gap-2 border-t px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground text-xs font-medium">
+                  Average {data.y_axis_label || "Value"}
+                </span>
+              </div>
+              <span className="text-lg leading-none font-bold sm:text-2xl text-primary">
+                {historicalAverage >= 1e9
+                  ? `${(historicalAverage / 1e9).toFixed(1)}B`
+                  : historicalAverage >= 1e6
+                  ? `${(historicalAverage / 1e6).toFixed(1)}M`
+                  : historicalAverage >= 1e3
+                  ? `${(historicalAverage / 1e3).toFixed(1)}K`
+                  : historicalAverage.toFixed(0)}
+              </span>
+            </div>
 
-            {/* Historical data line (gray) */}
-            <path
-              d={processedData.historical
-                .map((point, index) => {
-                  const x = xScale(index);
-                  const y = yScale(point.value);
-                  return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-                })
-                .join(" ")}
-              stroke="hsl(var(--muted-foreground))"
-              strokeWidth={2}
-              fill="none"
-            />
-
-            {/* Forecast data line (blue) */}
-            <path
-              d={processedData.forecast
-                .map((point, index) => {
-                  const x = xScale(processedData.historical.length + index);
-                  const y = yScale(point.value);
-                  return index === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
-                })
-                .join(" ")}
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              fill="none"
-            />
-
-            {/* Data points */}
-            {allPoints.map((point, index) => (
-              <circle
-                key={index}
-                cx={xScale(index)}
-                cy={yScale(point.value)}
-                r={3}
-                fill={
-                  point.type === "historical"
-                    ? "hsl(var(--muted-foreground))"
-                    : "hsl(var(--primary))"
-                }
-              />
-            ))}
-          </g>
-
-          {/* Y-axis label */}
-          <text
-            x={20}
-            y={chartHeight / 2}
-            textAnchor="middle"
-            transform={`rotate(-90, 20, ${chartHeight / 2})`}
-            className="text-sm fill-muted-foreground"
+            <div className="flex flex-1 flex-col justify-center gap-2 border-t border-l px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground text-xs font-medium">
+                  Data Points
+                </span>
+              </div>
+              <span className="text-lg leading-none font-bold sm:text-2xl text-primary">
+                {filteredHistoricalData.length}
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={historicalChartConfig}
+            className="aspect-auto h-[300px] w-full"
           >
-            {data.y_axis_label}
-          </text>
+            <AreaChart data={filteredHistoricalData}>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                vertical={false}
+                stroke="#e2e8f0"
+              />
+              <XAxis
+                dataKey="timestamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={32}
+                fontSize={12}
+              />
+              <YAxis
+                domain={[0, "dataMax + 5000000000"]}
+                tickFormatter={(value) => {
+                  const absValue = Math.abs(value);
+                  const sign = value < 0 ? "-" : "";
 
-          {/* X-axis label */}
-          <text
-            x={chartWidth / 2}
-            y={chartHeight - 10}
-            textAnchor="middle"
-            className="text-sm fill-muted-foreground"
+                  if (absValue >= 1e9)
+                    return `${sign}${(absValue / 1e9).toFixed(1)}B`;
+                  if (absValue >= 1e6)
+                    return `${sign}${(absValue / 1e6).toFixed(1)}M`;
+                  if (absValue >= 1e3)
+                    return `${sign}${(absValue / 1e3).toFixed(1)}K`;
+                  return value.toString();
+                }}
+                fontSize={12}
+              />
+
+              <ChartTooltip
+                cursor={{ fill: "rgba(59, 130, 246, 0.1)" }}
+                content={
+                  <ChartTooltipContent
+                    formatter={(value: any, name: any) => {
+                      if (typeof value === "number") {
+                        const absValue = Math.abs(value);
+                        const sign = value < 0 ? "-" : "";
+
+                        if (absValue >= 1e9)
+                          return [
+                            `${sign}${(absValue / 1e9).toFixed(2)}B`,
+                            name,
+                          ];
+                        if (absValue >= 1e6)
+                          return [
+                            `${sign}${(absValue / 1e6).toFixed(2)}M`,
+                            name,
+                          ];
+                        return [value.toLocaleString(), name];
+                      }
+                      return [value, name];
+                    }}
+                    labelFormatter={(label) => `Date: ${label}`}
+                  />
+                }
+              />
+
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                fill="var(--chart-1)"
+                fillOpacity={0.1}
+                dot={false}
+                activeDot={false}
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+            </AreaChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Render forecast data chart using the working logic from test page
+  const renderForecastChart = () => {
+    if (forecastData.length === 0) return null;
+
+    return (
+      <Card className="border-0 shadow-xl bg-background hover:shadow-2xl transition-all duration-500">
+        <CardHeader className="flex flex-col items-stretch border-b space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/20 rounded-lg">
+                <TrendingUp className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-xl text-primary">
+                  Forecast Data Analysis
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Showing {forecastData.length} forecast points with{" "}
+                  <span className="font-semibold text-primary">
+                    {hasConfidenceInterval
+                      ? "confidence intervals"
+                      : "trend analysis"}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex">
+            <div className="flex flex-1 flex-col justify-center gap-2 border-t px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground text-xs font-medium">
+                  Average Forecast
+                </span>
+              </div>
+              <span className="text-lg leading-none font-bold sm:text-2xl text-primary">
+                {forecastAverage >= 1e9
+                  ? `${(forecastAverage / 1e9).toFixed(1)}B`
+                  : forecastAverage >= 1e6
+                  ? `${(forecastAverage / 1e6).toFixed(1)}M`
+                  : forecastAverage >= 1e3
+                  ? `${(forecastAverage / 1e3).toFixed(1)}K`
+                  : forecastAverage.toFixed(0)}
+              </span>
+            </div>
+
+            <div className="flex flex-1 flex-col justify-center gap-2 border-t border-l px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground text-xs font-medium">
+                  Data Points
+                </span>
+              </div>
+              <span className="text-lg leading-none font-bold sm:text-2xl text-primary">
+                {forecastData.length}
+              </span>
+            </div>
+
+            <div className="flex flex-1 flex-col justify-center gap-2 border-t border-l px-6 py-4 text-left sm:border-t-0 sm:border-l sm:px-8 sm:py-6">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <span className="text-muted-foreground text-xs font-medium">
+                  Projected Change
+                </span>
+              </div>
+              <div
+                className={`text-lg leading-none font-bold sm:text-2xl flex items-center gap-1 ${
+                  projectedChange >= 0 ? "text-green-600" : "text-red-600"
+                }`}
+              >
+                {projectedChange >= 0 ? "↗" : "↘"}{" "}
+                {Math.abs(projectedChange).toFixed(1)}%
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={forecastChartConfig}
+            className="aspect-auto h-[300px] w-full"
           >
-            Time
-          </text>
-        </svg>
-      </div>
+            <AreaChart data={forecastData}>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="timestamp"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                minTickGap={32}
+              />
+              <YAxis
+                domain={[0, "dataMax + 5000000000"]}
+                tickFormatter={(value) => {
+                  const absValue = Math.abs(value);
+                  const sign = value < 0 ? "-" : "";
+
+                  if (absValue >= 1e9)
+                    return `${sign}${(absValue / 1e9).toFixed(1)}B`;
+                  if (absValue >= 1e6)
+                    return `${sign}${(absValue / 1e6).toFixed(1)}M`;
+                  if (absValue >= 1e3)
+                    return `${sign}${(absValue / 1e3).toFixed(1)}K`;
+                  return value.toString();
+                }}
+              />
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    formatter={(value: any, name: any) => {
+                      let formattedValue;
+                      if (typeof value === "number") {
+                        const absValue = Math.abs(value);
+                        const sign = value < 0 ? "-" : "";
+
+                        if (absValue >= 1e9) {
+                          formattedValue = `${sign}${(absValue / 1e9).toFixed(
+                            2
+                          )}B`;
+                        } else if (absValue >= 1e6) {
+                          formattedValue = `${sign}${(absValue / 1e6).toFixed(
+                            2
+                          )}M`;
+                        } else {
+                          formattedValue = value.toLocaleString();
+                        }
+                      } else {
+                        formattedValue = value;
+                      }
+
+                      let displayName = name;
+                      if (name === "value") displayName = " Value";
+                      else if (name === "forecast_upper_bound")
+                        displayName = " Upper";
+                      else if (name === "forecast_lower_bound")
+                        displayName = " Lower";
+
+                      return [formattedValue, displayName];
+                    }}
+                  />
+                }
+              />
+
+              {/* Upper bound area (lightest) */}
+              <Area
+                dataKey="forecast_upper_bound"
+                type="monotone"
+                fill="var(--chart-3)"
+                fillOpacity={0.3}
+                stroke="var(--chart-3)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+              />
+
+              {/* Lower bound area */}
+              <Area
+                dataKey="forecast_lower_bound"
+                type="monotone"
+                fill="var(--chart-2)"
+                fillOpacity={0.3}
+                stroke="var(--chart-2)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+              />
+
+              {/* Main forecast value (most prominent) */}
+              <Area
+                dataKey="value"
+                type="monotone"
+                fill="var(--chart-1)"
+                fillOpacity={0.3}
+                stroke="var(--chart-1)"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+              />
+              <ChartLegend content={<ChartLegendContent />} />
+            </AreaChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     );
   };
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>{data.title || "Forecast Chart"}</span>
-          <div className="flex items-center gap-4 text-sm">
-            {/* Legend */}
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-muted-foreground"></div>
-              <span className="text-muted-foreground">Historical</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-0.5 bg-primary"></div>
-              <span className="text-muted-foreground">Forecast</span>
-            </div>
-            {processedData.hasConfidenceInterval && (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-2 bg-primary/20 border border-primary/40"></div>
-                <span className="text-muted-foreground">Confidence</span>
-              </div>
-            )}
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Chart */}
-        {renderChart()}
+      <CardContent className="space-y-6">
+        {/* Historical Chart */}
+        {renderHistoricalChart()}
+
+        {/* Forecast Chart */}
+        {renderForecastChart()}
 
         {/* Data Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           <div className="text-center">
             <div className="font-semibold text-muted-foreground">
-              Historical Points
+              Historical Points (Total)
+            </div>
+            <div className="text-lg font-bold">{historicalData.length}</div>
+          </div>
+          <div className="text-center">
+            <div className="font-semibold text-muted-foreground">
+              Historical Points (Filtered)
             </div>
             <div className="text-lg font-bold">
-              {processedData.historical.length}
+              {filteredHistoricalData.length}
             </div>
           </div>
           <div className="text-center">
             <div className="font-semibold text-muted-foreground">
               Forecast Points
             </div>
+            <div className="text-lg font-bold">{forecastData.length}</div>
+          </div>
+          <div className="text-center">
+            <div className="font-semibold text-muted-foreground">
+              Forecast Period
+            </div>
             <div className="text-lg font-bold">
-              {processedData.forecast.length}
+              {forecastData.length > 0
+                ? Math.ceil(
+                    (new Date(
+                      forecastData[forecastData.length - 1]?.date
+                    ).getTime() -
+                      new Date(forecastData[0]?.date).getTime()) /
+                      (1000 * 60 * 60 * 24)
+                  )
+                : 90}{" "}
+              days
             </div>
           </div>
           <div className="text-center">
-            <div className="font-semibold text-muted-foreground">Min Value</div>
+            <div className="font-semibold text-muted-foreground">
+              Data Range
+            </div>
             <div className="text-lg font-bold">
-              {formatNumber(processedData.minValue)}
+              {historicalData.length > 0 && forecastData.length > 0
+                ? `${new Date(
+                    historicalData[0]?.date
+                  ).getFullYear()} - ${new Date(
+                    forecastData[forecastData.length - 1]?.date
+                  ).getFullYear()}`
+                : "N/A"}
             </div>
           </div>
-          <div className="text-center">
-            <div className="font-semibold text-muted-foreground">Max Value</div>
-            <div className="text-lg font-bold">
-              {formatNumber(processedData.maxValue)}
-            </div>
-          </div>
-        </div>
-
-        {/* Detailed Data (Expandable) */}
-        <div>
-          <Button
-            variant="ghost"
-            onClick={() => setShowDetails(!showDetails)}
-            className="w-full justify-between"
-          >
-            View Raw Data
-            {showDetails ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-
-          {showDetails && (
-            <div className="mt-4 space-y-4">
-              <div>
-                <h4 className="font-semibold mb-2">Historical Data</h4>
-                <div className="max-h-40 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Timestamp</TableHead>
-                        <TableHead>Value</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {processedData.historical.map((point, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{point.timestamp}</TableCell>
-                          <TableCell>{formatNumber(point.value)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-semibold mb-2">Forecast Data</h4>
-                <div className="max-h-40 overflow-y-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Timestamp</TableHead>
-                        <TableHead>Value</TableHead>
-                        {processedData.hasConfidenceInterval && (
-                          <>
-                            <TableHead>Lower Bound</TableHead>
-                            <TableHead>Upper Bound</TableHead>
-                          </>
-                        )}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {processedData.forecast.map((point, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{point.timestamp}</TableCell>
-                          <TableCell>{formatNumber(point.value)}</TableCell>
-                          {processedData.hasConfidenceInterval && (
-                            <>
-                              <TableCell>
-                                {point.predLow
-                                  ? formatNumber(point.predLow)
-                                  : "-"}
-                              </TableCell>
-                              <TableCell>
-                                {point.predHigh
-                                  ? formatNumber(point.predHigh)
-                                  : "-"}
-                              </TableCell>
-                            </>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>
@@ -1522,9 +1809,12 @@ export const MultiSectionReportDisplay: React.FC<{
           <KeyValueDisplay
             key={index}
             data={processedKeyValueData as KeyValueData}
+            hideTitle={true} // Hide title since we show it at section level
           />
         );
+
       case "dataframe":
+      case "table":
         // Handle both new and legacy data structures for dataframe
         const dataFrameData = section.content as any;
         const processedDataFrameData = dataFrameData?.dataframe
@@ -1536,8 +1826,10 @@ export const MultiSectionReportDisplay: React.FC<{
             data={processedDataFrameData as DataFrameData}
           />
         );
+
       case "text":
         return <TextDisplay key={index} content={section.content as string} />;
+
       case "virality_report":
         return (
           <ViralityReportDisplay
@@ -1545,6 +1837,7 @@ export const MultiSectionReportDisplay: React.FC<{
             data={section.content as ViralityReportData}
           />
         );
+
       case "forecast_chart":
         return (
           <ForecastChartDisplay
@@ -1552,6 +1845,7 @@ export const MultiSectionReportDisplay: React.FC<{
             data={section.content as ForecastChartData}
           />
         );
+
       case "playlist_recommendation_report":
         return (
           <PlaylistRecommendationDisplay
@@ -1559,16 +1853,152 @@ export const MultiSectionReportDisplay: React.FC<{
             data={section.content as PlaylistRecommendationData}
           />
         );
+
+      case "multi_forecast_display":
+        return (
+          <MultiForecastDisplay
+            key={index}
+            data={section.content as MultiForecastDisplayData}
+          />
+        );
+
+      case "error":
+        return <ErrorDisplay key={index} content={section.content as string} />;
+
+      case "mixed_content":
+        return (
+          <MixedContentDisplay
+            key={index}
+            textContent=""
+            structuredData={section.content}
+            dataType={section.section_type}
+          />
+        );
+
       default:
+        // Enhanced fallback - try to auto-detect the data type based on content structure
+        const content = section.content as any;
+
+        // Try to detect dataframe structure
+        if (content && typeof content === "object") {
+          // Check for dataframe structure (new format with dataframe property)
+          if (
+            content.dataframe &&
+            content.dataframe.index &&
+            content.dataframe.columns &&
+            content.dataframe.data
+          ) {
+            return (
+              <DataFrameDisplay key={index} data={content as DataFrameData} />
+            );
+          }
+
+          // Check for legacy dataframe structure (direct properties)
+          if (content.index && content.columns && content.data) {
+            return (
+              <DataFrameDisplay
+                key={index}
+                data={{ dataframe: content } as DataFrameData}
+              />
+            );
+          }
+
+          // Check for key-value structure (new format with data property)
+          if (content.data && typeof content.data === "object") {
+            const keyValueData = content.data;
+            if (
+              Object.keys(keyValueData).every(
+                (key) =>
+                  typeof keyValueData[key] === "string" ||
+                  typeof keyValueData[key] === "number"
+              )
+            ) {
+              return (
+                <KeyValueDisplay key={index} data={content as KeyValueData} />
+              );
+            }
+          }
+
+          // Check for legacy key-value structure (direct key-value pairs)
+          if (
+            Object.keys(content).every(
+              (key) =>
+                typeof content[key] === "string" ||
+                typeof content[key] === "number"
+            )
+          ) {
+            return (
+              <KeyValueDisplay
+                key={index}
+                data={{ data: content } as KeyValueData}
+              />
+            );
+          }
+
+          // Check for virality report structure
+          if (
+            content.final_score !== undefined &&
+            content.verdict !== undefined
+          ) {
+            return (
+              <ViralityReportDisplay
+                key={index}
+                data={content as ViralityReportData}
+              />
+            );
+          }
+
+          // Check for forecast chart structure
+          if (content.historical_data || content.forecast_data) {
+            return (
+              <ForecastChartDisplay
+                key={index}
+                data={content as ForecastChartData}
+              />
+            );
+          }
+
+          // Check for multi-forecast structure
+          if (content.forecasts && Array.isArray(content.forecasts)) {
+            return (
+              <MultiForecastDisplay
+                key={index}
+                data={content as MultiForecastDisplayData}
+              />
+            );
+          }
+        }
+
+        // If it's a string, treat as text
+        if (typeof content === "string") {
+          return <TextDisplay key={index} content={content} />;
+        }
+
+        // Final fallback - show unknown section type with better formatting
+        console.warn(
+          `[MultiSectionReportDisplay] Unknown section type: ${section.section_type}`,
+          section.content
+        );
         return (
           <Card key={index}>
             <CardContent className="p-4">
-              <p className="text-muted-foreground">
-                Unknown section type: {section.section_type}
-              </p>
-              <pre className="text-xs overflow-auto mt-2">
-                {JSON.stringify(section.content, null, 2)}
-              </pre>
+              <div className="flex items-center gap-2 mb-3">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <p className="text-muted-foreground">
+                  Unknown section type:{" "}
+                  <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                    {section.section_type}
+                  </code>
+                </p>
+              </div>
+              <details className="cursor-pointer">
+                <summary className="text-sm font-medium mb-2">
+                  View raw data
+                </summary>
+                <pre className="text-xs overflow-auto bg-muted/50 p-3 rounded">
+                  {JSON.stringify(section.content, null, 2)}
+                </pre>
+              </details>
             </CardContent>
           </Card>
         );
@@ -1577,33 +2007,38 @@ export const MultiSectionReportDisplay: React.FC<{
 
   return (
     <div className="space-y-8">
-      {data.sections?.map((section, index) => (
-        <div key={index}>
-          {/* Section Title */}
-          {section.title && (
-            <div className="mb-4">
-              <h3 className="text-xl font-semibold text-foreground">
-                {section.title}
-              </h3>
-              <div className="h-px bg-border mt-2"></div>
-            </div>
-          )}
+      {data.sections?.map((section, index) => {
+        // Extract title from section.content.title or fallback to section.title
+        const sectionTitle = (section.content as any)?.title || section.title;
 
-          {/* Section Content */}
-          <div className="mb-6">{renderSection(section, index)}</div>
-
-          {/* Visual Separator (except for last section) */}
-          {index < (data.sections?.length || 0) - 1 && (
-            <div className="flex items-center justify-center py-4">
-              <Separator className="flex-1" />
-              <div className="px-4">
-                <div className="w-2 h-2 bg-muted-foreground/30 rounded-full"></div>
+        return (
+          <div key={index}>
+            {/* Section Title - Big Bold Heading */}
+            {sectionTitle && (
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold text-foreground mb-2">
+                  {sectionTitle}
+                </h2>
+                <div className="h-0.5 bg-gradient-to-r from-primary to-primary/20 rounded-full"></div>
               </div>
-              <Separator className="flex-1" />
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+
+            {/* Section Content */}
+            <div className="mb-8">{renderSection(section, index)}</div>
+
+            {/* Visual Separator (except for last section) */}
+            {index < (data.sections?.length || 0) - 1 && (
+              <div className="flex items-center justify-center py-6">
+                <Separator className="flex-1" />
+                <div className="px-4">
+                  <div className="w-3 h-3 bg-muted-foreground/20 rounded-full"></div>
+                </div>
+                <Separator className="flex-1" />
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

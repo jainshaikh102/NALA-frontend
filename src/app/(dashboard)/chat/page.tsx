@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -17,6 +17,9 @@ import {
   Upload,
   Mic,
   X,
+  Download,
+  FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import {
@@ -46,6 +49,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/store/auth-store";
 import { useGet, usePost } from "@/hooks/use-api";
 import { GoogleDriveConnector } from "@/components/sources/google-drive-connector";
@@ -58,6 +67,10 @@ import {
 } from "@/hooks/use-chat-sessions";
 import { useChatRoster } from "@/hooks/use-chat-roster";
 import { useUserRoster, type Artist } from "@/hooks/use-artists";
+import {
+  downloadMessageAsPDF,
+  downloadMessageAsExcel,
+} from "@/utils/downloadUtils";
 import { useImageGeneration, useVideoGeneration } from "@/hooks/use-generation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -71,12 +84,45 @@ interface ChatMessage {
   dataType?: string;
   queryStr?: string;
   status?: boolean;
+  isThinking?: boolean;
 }
 
 const ChatPage = () => {
   const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+  const [isSwitchingChat, setIsSwitchingChat] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  // Refs for auto-scrolling
+  const desktopChatRef = useRef<HTMLDivElement>(null);
+  const mobileChatRef = useRef<HTMLDivElement>(null);
+
+  // Tab state management
+  const [desktopActiveTab, setDesktopActiveTab] = useState("chats");
+  const [mobileActiveTab, setMobileActiveTab] = useState("allchats");
+
+  // Function to scroll to bottom
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      if (desktopChatRef.current) {
+        desktopChatRef.current.scrollTop = desktopChatRef.current.scrollHeight;
+      }
+      if (mobileChatRef.current) {
+        // For mobile, try smooth scroll first, fallback to instant
+        try {
+          mobileChatRef.current.scrollTo({
+            top: mobileChatRef.current.scrollHeight,
+            behavior: "smooth",
+          });
+        } catch (error) {
+          // Fallback for older browsers
+          mobileChatRef.current.scrollTop = mobileChatRef.current.scrollHeight;
+        }
+      }
+    }, 150); // Slightly longer delay for mobile
+  };
+
   const [isRosterDialogOpen, setIsRosterDialogOpen] = useState(false);
   const [allArtists, setAllArtists] = useState<string[]>([]);
   const [filteredArtists, setFilteredArtists] = useState<string[]>([]);
@@ -285,7 +331,22 @@ const ChatPage = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputText("");
-    setIsLoading(true);
+    setIsSendingMessage(true);
+    scrollToBottom();
+
+    // Add NALA thinking indicator
+    const thinkingMessage = {
+      id: Date.now() + 0.5,
+      type: "bot" as const,
+      content: "NALA is thinking...",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isThinking: true,
+    };
+    setMessages((prev) => [...prev, thinkingMessage]);
+    scrollToBottom();
 
     try {
       const payload = {
@@ -313,39 +374,48 @@ const ChatPage = () => {
 
       const data = await response.json();
 
-      const botMessage = {
-        id: Date.now() + 1,
-        type: "bot" as const,
-        content: data.answer_str || "Sorry, I couldn't process your request.",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        displayData: data.display_data,
-        dataType: data.data_type || "text",
-        queryStr: data.query_str,
-        status: data.status_bool,
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
+      // Remove thinking message and add actual response
+      setMessages((prev) => {
+        const withoutThinking = prev.filter((msg) => !msg.isThinking);
+        const botMessage = {
+          id: Date.now() + 1,
+          type: "bot" as const,
+          content: data.answer_str || "Sorry, I couldn't process your request.",
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          displayData: data.display_data,
+          dataType: data.data_type || "text",
+          queryStr: data.query_str,
+          status: data.status_bool,
+        };
+        return [...withoutThinking, botMessage];
+      });
+      scrollToBottom();
 
       // Mark that we've completed a message cycle (user message + bot response)
       setHasCompletedMessageCycle(true);
     } catch (error) {
       console.error("Error sending message:", error);
-      const errorMessage = {
-        id: Date.now() + 1,
-        type: "bot" as const,
-        content:
-          "Sorry, there was an error processing your request. Please try again.",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      // Remove thinking message and add error message
+      setMessages((prev) => {
+        const withoutThinking = prev.filter((msg) => !msg.isThinking);
+        const errorMessage = {
+          id: Date.now() + 1,
+          type: "bot" as const,
+          content:
+            "Sorry, there was an error processing your request. Please try again.",
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        return [...withoutThinking, errorMessage];
+      });
+      scrollToBottom();
     } finally {
-      setIsLoading(false);
+      setIsSendingMessage(false);
     }
   };
 
@@ -443,11 +513,60 @@ const ChatPage = () => {
         })
       );
       setMessages(convertedMessages);
+      // Don't hide loading here - wait for both APIs to complete
     } else if (currentSessionId && (!chatHistory || chatHistory.length === 0)) {
       // Clear messages if we have a session but no history (new session)
       setMessages([]);
+      // Don't hide loading here - wait for both APIs to complete
     }
   }, [chatHistory, currentSessionId]);
+
+  // Auto-scroll when messages change and hide loading when both APIs are complete
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Wait for messages to render in DOM before scrolling
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    } else {
+      // Just scroll if no messages
+      scrollToBottom();
+    }
+  }, [messages]);
+
+  // Hide loading only when messages are actually rendered in the UI
+  useEffect(() => {
+    // Only hide loading if we're currently switching chats
+    if (!isSwitchingChat) return;
+
+    // Check if both APIs have finished loading
+    const bothAPIsComplete = !isLoadingHistory && !isLoadingSelected;
+
+    if (currentSessionId && bothAPIsComplete && messages.length > 0) {
+      // Wait for messages to actually render in the DOM
+      setTimeout(() => {
+        setIsLoadingChats(false);
+        setIsSwitchingChat(false);
+      }, 800); // Longer delay to ensure complete rendering
+    } else if (
+      currentSessionId &&
+      bothAPIsComplete &&
+      (!chatHistory || chatHistory.length === 0)
+    ) {
+      // Handle empty chat sessions (no messages)
+      setTimeout(() => {
+        setIsLoadingChats(false);
+        setIsSwitchingChat(false);
+      }, 500);
+    }
+  }, [
+    isLoadingHistory,
+    isLoadingSelected,
+    currentSessionId,
+    messages,
+    chatHistory,
+    isSwitchingChat,
+  ]);
 
   // Auto-select the top (most recent) chat session when chat sessions are loaded
   useEffect(() => {
@@ -460,8 +579,16 @@ const ChatPage = () => {
       const mostRecentSession = sortedSessions[0];
 
       if (mostRecentSession) {
+        // Set loading state for initial page load
+        setIsLoadingChats(true);
+        setIsSwitchingChat(true);
+
+        // Clear any existing messages
+        setMessages([]);
+
+        // Set the initial session
         setCurrentSessionId(mostRecentSession.session_id);
-        // Don't clear messages here as they will be loaded by the chatHistory effect
+        // Messages will be loaded by the chatHistory effect
       }
     }
   }, [chatSessions, currentSessionId]);
@@ -586,9 +713,23 @@ const ChatPage = () => {
   };
 
   const handleLoadChatSession = (sessionId: string) => {
-    setCurrentSessionId(sessionId);
-    // Clear current messages and load history
-    setMessages([]);
+    // Only load if it's a different session (prevent deselection)
+    if (currentSessionId !== sessionId) {
+      // Set loading states immediately
+      setIsLoadingChats(true);
+      setIsSwitchingChat(true);
+
+      // Clear current messages first
+      setMessages([]);
+
+      // Small delay to ensure loading state is visible before switching
+      setTimeout(() => {
+        setCurrentSessionId(sessionId);
+        // Auto-switch to Sources tab to show sources/rosters for this chat
+        setDesktopActiveTab("sources");
+        setMobileActiveTab("sources");
+      }, 100);
+    }
   };
 
   const handleDeleteSession = (sessionId: string, preview: string) => {
@@ -788,15 +929,35 @@ const ChatPage = () => {
             </div>
           </div>
 
+          {/* Current Chat Indicator - Always Visible */}
+          {currentSessionId && (
+            <div className="mx-4 mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                <span className="text-sm font-medium text-primary">
+                  Current Chat:
+                </span>
+              </div>
+              <p className="text-sm text-foreground mt-1 truncate">
+                {chatSessions.find((s) => s.session_id === currentSessionId)
+                  ?.preview || "New chat session"}
+              </p>
+            </div>
+          )}
+
           {/* Tabs */}
-          <Tabs defaultValue="sources" className="flex-1 flex flex-col">
+          <Tabs
+            value={desktopActiveTab}
+            onValueChange={setDesktopActiveTab}
+            className="flex-1 flex flex-col"
+          >
             <div className="px-4 pt-4">
               <TabsList className="w-full">
-                <TabsTrigger value="sources" className="flex-1">
-                  Sources
-                </TabsTrigger>
                 <TabsTrigger value="chats" className="flex-1">
                   All Chats
+                </TabsTrigger>
+                <TabsTrigger value="sources" className="flex-1">
+                  Sources
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -1145,9 +1306,32 @@ const ChatPage = () => {
 
       {/* Mobile/Tablet: Combined Container with Tabs */}
       <div className="flex-1 lg:hidden flex flex-col bg-background rounded-lg overflow-hidden">
-        <TabsBB defaultValue="chat" className="flex-1 flex flex-col">
+        {/* Current Chat Indicator - Always Visible on Mobile */}
+        {currentSessionId && (
+          <div className="mx-4 mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <span className="text-sm font-medium text-primary">
+                Current Chat:
+              </span>
+            </div>
+            <p className="text-sm text-foreground mt-1 truncate">
+              {chatSessions.find((s) => s.session_id === currentSessionId)
+                ?.preview || "New chat session"}
+            </p>
+          </div>
+        )}
+
+        <TabsBB
+          value={mobileActiveTab}
+          onValueChange={setMobileActiveTab}
+          className="flex-1 flex flex-col"
+        >
           <div className="p-4 border-b border-border">
             <TabsListBB className="w-full">
+              <TabsTriggerBB value="allchats" className="flex-1">
+                All Chats
+              </TabsTriggerBB>
               <TabsTriggerBB value="sources" className="flex-1">
                 Sources
               </TabsTriggerBB>
@@ -1157,191 +1341,260 @@ const ChatPage = () => {
             </TabsListBB>
           </div>
 
-          <TabsContentBB value="sources" className="flex-1 overflow-auto">
-            {/* Mobile Sources Content with Nested Tabs */}
-            <Tabs defaultValue="sources" className="flex-1 flex flex-col">
-              <div className="p-4 border-b border-border">
-                <TabsList className="w-full">
-                  <TabsTrigger value="sources" className="flex-1">
-                    Source
-                  </TabsTrigger>
-                  <TabsTrigger value="allchats" className="flex-1">
-                    All Chats
-                  </TabsTrigger>
-                </TabsList>
+          <TabsContentBB value="allchats" className="flex-1 overflow-auto">
+            {/* Mobile All Chats Content */}
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Recent Chats
+                </h2>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                  onClick={handleCreateNewSession}
+                  disabled={isStartingSession}
+                >
+                  {isStartingSession ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
 
-              <TabsContent value="sources" className="flex-1 overflow-auto">
-                <div className="p-4 space-y-3">
-                  <Dialog
-                    open={isAddSourceDialogOpen}
-                    onOpenChange={setIsAddSourceDialogOpen}
-                  >
-                    <DialogTrigger asChild>
-                      <Button className="w-full bg-[secondary] hover:bg-primary/90 text-primary-foreground border-solid border-[1px] border-[#ffffff]/50 rounded-full">
-                        <Plus className="h-4 w-4 mr-2" />
-                        ADD SOURCE
+              <div className="space-y-2">
+                {isLoadingSessions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading chats...
+                    </span>
+                  </div>
+                ) : chatSessions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No chat sessions yet. Click + to create your first chat.
+                  </div>
+                ) : (
+                  chatSessions.map((session) => (
+                    <div
+                      key={session.session_id}
+                      className={`flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group ${
+                        currentSessionId === session.session_id
+                          ? "bg-primary/20 border-primary/30"
+                          : "bg-secondary/30"
+                      }`}
+                      onClick={() => handleLoadChatSession(session.session_id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground truncate">
+                          {session.preview || "New chat session"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(session.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSession(
+                            session.session_id,
+                            session.preview
+                          );
+                        }}
+                        disabled={isEndingSession}
+                      >
+                        {isEndingSession ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3 w-3 text-white" />
+                        )}
                       </Button>
-                    </DialogTrigger>
-                    {/* Add Source Dialog Content - Same as desktop */}
-                    <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
-                      <div className="relative">
-                        <div className="sticky top-0 bg-[#222C41] z-10 px-8 py-6 border-b border-[#ffffff]/10">
-                          <h2 className="text-2xl font-bold text-white text-center">
-                            Add Source
-                          </h2>
-                        </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </TabsContentBB>
 
-                        {/* Source Options */}
-                        <div className="px-8 pb-4">
-                          <div className="grid grid-cols-3 gap-6">
-                            {sources.map((source) => (
-                              <div
-                                key={source.id}
-                                className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
-                                onClick={() => {
-                                  if (source.name === "Google Drive") {
-                                    setIsAddSourceDialogOpen(false);
-                                    setIsGoogleDriveDialogOpen(true);
-                                  }
-                                }}
-                              >
-                                <Image
-                                  src={source.icon}
-                                  alt={source.name}
-                                  width={48}
-                                  height={48}
-                                  className="mb-4"
-                                />
-                                <h3 className="text-white font-medium text-center">
-                                  {source.name}
-                                </h3>
-                              </div>
-                            ))}
-                          </div>
+          <TabsContentBB value="sources" className="flex-1 overflow-auto">
+            {/* Mobile Sources Content - No Nested Tabs */}
+            <div className="flex-1 flex flex-col">
+              {/* Sources Section */}
+              <div className="p-4 space-y-3">
+                <Dialog
+                  open={isAddSourceDialogOpen}
+                  onOpenChange={setIsAddSourceDialogOpen}
+                >
+                  <DialogTrigger asChild>
+                    <Button className="w-full bg-[secondary] hover:bg-primary/90 text-primary-foreground border-solid border-[1px] border-[#ffffff]/50 rounded-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      ADD SOURCE
+                    </Button>
+                  </DialogTrigger>
+                  {/* Add Source Dialog Content - Same as desktop */}
+                  <DialogContent className="w-full max-w-5xl max-h-[90vh] overflow-auto bg-[#222C41] border-none p-0 rounded-t-3xl">
+                    <div className="relative">
+                      <div className="sticky top-0 bg-[#222C41] z-10 px-8 py-6 border-b border-[#ffffff]/10">
+                        <h2 className="text-2xl font-bold text-white text-center">
+                          Add Source
+                        </h2>
+                      </div>
+
+                      {/* Source Options */}
+                      <div className="px-8 pb-4">
+                        <div className="grid grid-cols-3 gap-6">
+                          {sources.map((source) => (
+                            <div
+                              key={source.id}
+                              className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
+                              onClick={() => {
+                                if (source.name === "Google Drive") {
+                                  setIsAddSourceDialogOpen(false);
+                                  setIsGoogleDriveDialogOpen(true);
+                                }
+                              }}
+                            >
+                              <Image
+                                src={source.icon}
+                                alt={source.name}
+                                width={48}
+                                height={48}
+                                className="mb-4"
+                              />
+                              <h3 className="text-white font-medium text-center">
+                                {source.name}
+                              </h3>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </div>
+                  </DialogContent>
+                </Dialog>
 
-                  {/* Sources List */}
-                  <div className="space-y-2">
-                    {sources.map((source) => (
+                {/* Sources List */}
+                <div className="space-y-2">
+                  {sources.map((source) => (
+                    <div
+                      key={source.id}
+                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Image
+                          src={source.icon}
+                          alt={source.name}
+                          width={20}
+                          height={20}
+                        />
+                        <span className="text-sm font-medium text-foreground">
+                          {source.name}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rosters Section */}
+              <div className="p-4 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Rosters{" "}
+                    <span className="text-sm text-muted-foreground">
+                      ({chatSelectedArtists.length})
+                    </span>
+                  </h2>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
+                    onClick={handleOpenAddRosterDialog}
+                    disabled={!currentSessionId || isSelectingArtists}
+                  >
+                    {isSelectingArtists ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {isLoadingSelected ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        Loading rosters...
+                      </span>
+                    </div>
+                  ) : chatSelectedArtists.length > 0 ? (
+                    chatSelectedArtists.map((artist, index) => (
                       <div
-                        key={source.id}
-                        className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                        key={index}
+                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border/50"
                       >
                         <div className="flex items-center space-x-3">
-                          <Image
-                            src={source.icon}
-                            alt={source.name}
-                            width={20}
-                            height={20}
-                          />
-                          <span className="text-sm font-medium text-foreground">
-                            {source.name}
+                          <span className="text-sm text-foreground">
+                            {artist}
                           </span>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          className="h-6 w-6 text-red-500 hover:text-red-700"
+                          onClick={() => handleRemoveRosterArtist(artist)}
+                          disabled={isDeselectingArtist}
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          {isDeselectingArtist ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <X className="h-3 w-3" />
+                          )}
                         </Button>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      {currentSessionId
+                        ? "No artists selected for this chat"
+                        : "Select a chat session to manage rosters"}
+                    </div>
+                  )}
                 </div>
-              </TabsContent>
-
-              <TabsContent value="allchats" className="flex-1 overflow-auto">
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between ">
-                    <h2 className="text-lg font-semibold text-foreground">
-                      Recent Chats
-                    </h2>
-                    {/* Create New Chat Button */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
-                      onClick={handleCreateNewSession}
-                      disabled={isStartingSession}
-                    >
-                      {isStartingSession ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Plus className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    {isLoadingSessions ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        <span className="text-sm text-muted-foreground">
-                          Loading chats...
-                        </span>
-                      </div>
-                    ) : chatSessions.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground text-sm">
-                        No chat sessions yet. Click + to create your first chat.
-                      </div>
-                    ) : (
-                      chatSessions.map((session) => (
-                        <div
-                          key={session.session_id}
-                          className={`flex items-center justify-between p-3 rounded-lg hover:bg-secondary/50 transition-colors cursor-pointer border border-border/50 group ${
-                            currentSessionId === session.session_id
-                              ? "bg-primary/20 border-primary/30"
-                              : "bg-secondary/30"
-                          }`}
-                          onClick={() =>
-                            handleLoadChatSession(session.session_id)
-                          }
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-foreground truncate">
-                              {session.preview || "New chat session"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(
-                                session.created_at
-                              ).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 group-hover:opacity-100 transition-opacity ml-2 flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSession(
-                                session.session_id,
-                                session.preview
-                              );
-                            }}
-                            disabled={isEndingSession}
-                          >
-                            {isEndingSession ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <X className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           </TabsContentBB>
 
           <TabsContentBB value="chat" className="flex-1 flex flex-col">
             {/* Mobile Chat Content */}
-            <div className="flex-1 overflow-auto p-4 relative">
+            <div
+              ref={mobileChatRef}
+              className="flex-1 overflow-y-auto overflow-x-hidden p-4 relative"
+              style={{ maxHeight: "calc(100vh - 200px)" }}
+            >
+              {/* Loading overlay for chat loading */}
+              {isLoadingChats && (
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
+                  <div className="flex flex-col items-center space-y-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">
+                      Loading chat...
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div key={index} className="space-y-2">
@@ -1353,12 +1606,72 @@ const ChatPage = () => {
                       </div>
                     ) : (
                       <div className="flex justify-start">
-                        <div className="max-w-[80%] bg-muted rounded-lg p-3">
-                          <ResponseRenderer
-                            answerStr={message.content}
-                            displayData={message.displayData}
-                            dataType={message.dataType || "text"}
-                          />
+                        <div className="max-w-[80%] bg-muted rounded-lg p-3 relative group">
+                          {/* Download Options for Mobile - Top Right */}
+                          {!message.isThinking && message.displayData && (
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5"
+                                  >
+                                    <Download className="h-3 w-3" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-32"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      downloadMessageAsPDF(message, message.id)
+                                    }
+                                  >
+                                    <FileText className="mr-2 h-3 w-3" />
+                                    PDF
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      downloadMessageAsExcel(
+                                        message,
+                                        message.id
+                                      )
+                                    }
+                                  >
+                                    <FileSpreadsheet className="mr-2 h-3 w-3" />
+                                    Excel
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
+
+                          {message.isThinking ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="flex space-x-1">
+                                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                                <div
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                                  style={{ animationDelay: "0.1s" }}
+                                ></div>
+                                <div
+                                  className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                                  style={{ animationDelay: "0.2s" }}
+                                ></div>
+                              </div>
+                              <span className="text-sm text-primary font-medium">
+                                {message.content}
+                              </span>
+                            </div>
+                          ) : (
+                            <ResponseRenderer
+                              answerStr={message.content}
+                              displayData={message.displayData}
+                              dataType={message.dataType || "text"}
+                            />
+                          )}
                         </div>
                       </div>
                     )}
@@ -1491,7 +1804,9 @@ const ChatPage = () => {
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       disabled={
-                        isLoading || isGeneratingImage || isGeneratingVideo
+                        isSendingMessage ||
+                        isGeneratingImage ||
+                        isGeneratingVideo
                       }
                       className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                     />
@@ -1513,11 +1828,13 @@ const ChatPage = () => {
                           type="submit"
                           size="icon"
                           disabled={
-                            isLoading || isGeneratingImage || isGeneratingVideo
+                            isSendingMessage ||
+                            isGeneratingImage ||
+                            isGeneratingVideo
                           }
                           className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
                         >
-                          {isLoading ||
+                          {isSendingMessage ||
                           isGeneratingImage ||
                           isGeneratingVideo ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -1553,11 +1870,11 @@ const ChatPage = () => {
       {/* Desktop: Center Panel - Chat */}
       <div className="hidden lg:flex flex-1 flex-col bg-background  rounded-lg  overflow-hidden min-w-0">
         {/* Chat Header */}
-
         <div className="flex items-center justify-center flex-col relative overflow-hidden bg-transparent rounded-t-lg">
           <h3 className="absolute top-1/2 left-12 transform -translate-x-1/2 -translate-y-1/2 text-xl font-semibold text-foreground">
             Chat
           </h3>
+
           <Image
             src="/svgs/Bot-Lion.svg"
             alt="Bot Lion"
@@ -1569,7 +1886,20 @@ const ChatPage = () => {
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
+        <div
+          ref={desktopChatRef}
+          className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+        >
+          {/* Loading overlay for chat loading */}
+          {isLoadingChats && (
+            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
+              <div className="flex flex-col items-center space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading chat...</p>
+              </div>
+            </div>
+          )}
+
           {/* Loading states for generation */}
           {(isGeneratingImage || isGeneratingVideo) && (
             <div className="flex justify-start">
@@ -1616,24 +1946,81 @@ const ChatPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4 max-w-full">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Image
-                      src="/svgs/Golden-Paw.svg"
-                      alt="Paw"
-                      width={16}
-                      height={16}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {message.timestamp}
-                    </span>
+                <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4 max-w-full relative group">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <Image
+                        src="/svgs/Golden-Paw.svg"
+                        alt="Paw"
+                        width={16}
+                        height={16}
+                        className={message.isThinking ? "animate-pulse" : ""}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {message.timestamp}
+                      </span>
+                    </div>
+
+                    {/* Download Options - Show only for bot messages with data */}
+                    {!message.isThinking && message.displayData && (
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                            >
+                              <Download className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                downloadMessageAsPDF(message, message.id)
+                              }
+                            >
+                              <FileText className="mr-2 h-3 w-3" />
+                              PDF
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                downloadMessageAsExcel(message, message.id)
+                              }
+                            >
+                              <FileSpreadsheet className="mr-2 h-3 w-3" />
+                              Excel
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                   <div className="w-full">
-                    <ResponseRenderer
-                      answerStr={message.content}
-                      displayData={message.displayData}
-                      dataType={message.dataType || "text"}
-                    />
+                    {message.isThinking ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                          <div
+                            className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                            style={{ animationDelay: "0.1s" }}
+                          ></div>
+                          <div
+                            className="w-2 h-2 bg-primary rounded-full animate-bounce"
+                            style={{ animationDelay: "0.2s" }}
+                          ></div>
+                        </div>
+                        <span className="text-sm text-primary font-medium">
+                          {message.content}
+                        </span>
+                      </div>
+                    ) : (
+                      <ResponseRenderer
+                        answerStr={message.content}
+                        displayData={message.displayData}
+                        dataType={message.dataType || "text"}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -1670,7 +2057,9 @@ const ChatPage = () => {
                   placeholder="Ask or search anything..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  disabled={isLoading || isGeneratingImage || isGeneratingVideo}
+                  disabled={
+                    isSendingMessage || isGeneratingImage || isGeneratingVideo
+                  }
                   className="flex-1 bg-transparent w-full p-2 border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                 />
                 <div className="flex items-center justify-between w-full space-x-2">
@@ -1786,11 +2175,15 @@ const ChatPage = () => {
                         type="submit"
                         size="icon"
                         disabled={
-                          isLoading || isGeneratingImage || isGeneratingVideo
+                          isSendingMessage ||
+                          isGeneratingImage ||
+                          isGeneratingVideo
                         }
                         className="h-8 w-8 bg-primary hover:bg-primary/90 disabled:opacity-50"
                       >
-                        {isLoading || isGeneratingImage || isGeneratingVideo ? (
+                        {isSendingMessage ||
+                        isGeneratingImage ||
+                        isGeneratingVideo ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Send className="h-4 w-4" />
