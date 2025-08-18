@@ -67,6 +67,12 @@ const extractDataFromResponse = (message: ChatMessage) => {
     case "virality_report":
       return { type: "virality_report", data: displayData };
 
+    case "image_base64":
+      return { type: "image_base64", data: displayData };
+
+    case "video_url":
+      return { type: "video_url", data: displayData };
+
     default:
       return { type: "text", data: content };
   }
@@ -151,6 +157,75 @@ export const downloadMessageAsPDF = (
     console.error("Error generating PDF:", error);
     toast.error("Failed to generate PDF. Please try again.", {
       id: "pdf-download",
+    });
+  }
+};
+
+// Download Image from Base64
+export const downloadImageFromBase64 = (
+  base64Data: string,
+  messageIndex?: number
+) => {
+  try {
+    if (!base64Data) {
+      toast.error("No image data to download");
+      return;
+    }
+
+    toast.loading("Preparing image download...", { id: "image-download" });
+
+    // Create a link element and trigger download
+    const link = document.createElement("a");
+    link.href = `data:image/png;base64,${base64Data}`;
+    link.download = `nala-generated-image-${messageIndex || "single"}-${
+      new Date().toISOString().split("T")[0]
+    }.png`;
+
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success("Image downloaded successfully!", { id: "image-download" });
+  } catch (error) {
+    console.error("Error downloading image:", error);
+    toast.error("Failed to download image. Please try again.", {
+      id: "image-download",
+    });
+  }
+};
+
+// Download Video from URL
+export const downloadVideoFromUrl = (
+  videoUrl: string,
+  messageIndex?: number
+) => {
+  try {
+    if (!videoUrl) {
+      toast.error("No video URL to download");
+      return;
+    }
+
+    toast.loading("Preparing video download...", { id: "video-download" });
+
+    // Create a link element and trigger download
+    const link = document.createElement("a");
+    link.href = videoUrl;
+    link.download = `nala-generated-video-${messageIndex || "single"}-${
+      new Date().toISOString().split("T")[0]
+    }.mp4`;
+    link.target = "_blank"; // Open in new tab as fallback
+
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success("Video download started!", { id: "video-download" });
+  } catch (error) {
+    console.error("Error downloading video:", error);
+    toast.error("Failed to download video. Please try again.", {
+      id: "video-download",
     });
   }
 };
