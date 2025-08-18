@@ -1,6 +1,87 @@
 "use client";
 
 import Image from "next/image";
+import flag from "country-code-emoji";
+
+// Manual flag mapping for common countries
+const countryFlags: { [key: string]: string } = {
+  US: "🇺🇸",
+  GB: "🇬🇧",
+  CA: "🇨🇦",
+  AU: "🇦🇺",
+  DE: "🇩🇪",
+  FR: "🇫🇷",
+  IT: "🇮🇹",
+  ES: "🇪🇸",
+  NL: "🇳🇱",
+  SE: "🇸🇪",
+  NO: "🇳🇴",
+  DK: "🇩🇰",
+  FI: "🇫🇮",
+  JP: "🇯🇵",
+  KR: "🇰🇷",
+  CN: "🇨🇳",
+  IN: "🇮🇳",
+  BR: "🇧🇷",
+  MX: "🇲🇽",
+  AR: "🇦🇷",
+  CL: "🇨🇱",
+  CO: "🇨🇴",
+  PE: "🇵🇪",
+  RU: "🇷🇺",
+  PL: "🇵🇱",
+  CZ: "🇨🇿",
+  HU: "🇭🇺",
+  AT: "🇦🇹",
+  CH: "🇨🇭",
+  BE: "🇧🇪",
+  PT: "🇵🇹",
+  GR: "🇬🇷",
+  TR: "🇹🇷",
+  IL: "🇮🇱",
+  EG: "🇪🇬",
+  ZA: "🇿🇦",
+  NG: "🇳🇬",
+  KE: "🇰🇪",
+  TH: "🇹🇭",
+  VN: "🇻🇳",
+  PH: "🇵🇭",
+  ID: "🇮🇩",
+  MY: "🇲🇾",
+  SG: "🇸🇬",
+  NZ: "🇳🇿",
+};
+
+const getCountryFlag = (countryCode: string) => {
+  if (!countryCode) {
+    return <span>🌍</span>;
+  }
+
+  const code = countryCode.toUpperCase();
+
+  // Use flag images from flagcdn.com for reliable display
+  return (
+    <img
+      src={`https://flagcdn.com/16x12/${code.toLowerCase()}.png`}
+      alt={`${code} flag`}
+      width={16}
+      height={12}
+      style={{
+        display: "inline-block",
+        verticalAlign: "middle",
+        borderRadius: "2px",
+      }}
+      onError={(e) => {
+        // Fallback to globe emoji if flag image fails
+        const target = e.target as HTMLImageElement;
+        target.style.display = "none";
+        const fallback = document.createElement("span");
+        fallback.textContent = "🌍";
+        target.parentNode?.insertBefore(fallback, target.nextSibling);
+      }}
+    />
+  );
+};
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -231,18 +312,36 @@ export default function MyArtistsPage() {
                   <CardContent className="p-4 sm:p-6">
                     {/* Artist Info */}
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
-                        <Users className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300" />
+                      <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+                        {artist?.picture_url ? (
+                          <img
+                            src={artist?.picture_url}
+                            alt={artist.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Users className="w-4 h-4 text-gray-300" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <h3 className="text-white font-medium text-sm sm:text-base">
                           {artist.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-base sm:text-lg">🌍</span>
-                          <span className="text-gray-300 text-xs sm:text-sm">
-                            {artist.country}
+                          <span className="text-base sm:text-lg">
+                            {getCountryFlag(
+                              typeof artist.country === "string"
+                                ? artist.country
+                                : artist.country?.code || artist.country?.name
+                            )}
                           </span>
+                          {/* <span className="text-gray-300 text-xs sm:text-sm">
+                            {typeof artist.country === "string"
+                              ? artist.country
+                              : artist.country?.code ||
+                                artist.country?.name ||
+                                "Unknown"}
+                          </span> */}
                         </div>
                       </div>
                     </div>
@@ -374,8 +473,20 @@ export default function MyArtistsPage() {
                     </TableCell>
                     <TableCell className="py-4 px-6">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg">🌍</span>
-                        <span className="text-gray-300">{artist.country}</span>
+                        <span className="text-lg">
+                          {getCountryFlag(
+                            typeof artist.country === "string"
+                              ? artist.country
+                              : artist.country?.code || artist.country?.name
+                          )}
+                        </span>
+                        {/* <span className="text-gray-300">
+                          {typeof artist.country === "string"
+                            ? artist.country
+                            : artist.country?.code ||
+                              artist.country?.name ||
+                              "Unknown"}
+                        </span> */}
                       </div>
                     </TableCell>
                     <TableCell className="py-4 px-6">
@@ -684,12 +795,53 @@ const AddNewArtistDialog = ({
                           </svg>
                         )}
                       </div>
-                      <div
-                        className={`text-sm font-medium ${
-                          isAlreadyAdded ? "text-white" : "text-white"
-                        }`}
-                      >
-                        {artist.name}
+
+                      {/* Artist Picture */}
+                      <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
+                        {artist?.picture_url ? (
+                          <Image
+                            src={artist.picture_url}
+                            alt={artist.name}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-white text-xs font-medium">
+                            {artist.name?.charAt(0)?.toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Artist Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-white truncate">
+                          {artist.name}
+                        </div>
+                        <div className="flex items-center space-x-2 text-xs text-gray-300">
+                          <span className="flex items-center space-x-1">
+                            {getCountryFlag(
+                              typeof artist.country === "string"
+                                ? artist.country
+                                : artist.country?.code || artist.country?.name
+                            )}
+                            {/* <span>
+                              {typeof artist.country === "string"
+                                ? artist.country
+                                : artist.country?.code ||
+                                  artist.country?.name ||
+                                  "Unknown"}
+                            </span> */}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {artist.listenership
+                              ? `${(artist.listenership / 1000000).toFixed(
+                                  1
+                                )}M listeners`
+                              : "No data"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                     {isAlreadyAdded && (

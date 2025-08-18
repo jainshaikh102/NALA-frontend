@@ -69,7 +69,7 @@ export default function HelpPage() {
                   placeholder="Tell us what went wrong..."
                   value={helpText}
                   onChange={(e) => setHelpText(e.target.value)}
-                  className="min-h-[150px] sm:min-h-[200px] lg:min-h-[250px] bg-secondary border-border text-foreground placeholder:text-muted-foreground resize-none text-sm sm:text-base"
+                  className="min-h-[150px] sm:min-h-[200px] lg:min-h-[250px] bg-[#49566E] border-border text-foreground placeholder:text-muted-foreground resize-none text-sm sm:text-base"
                 />
               </div>
 
