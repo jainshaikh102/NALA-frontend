@@ -70,6 +70,8 @@ import { useUserRoster, type Artist } from "@/hooks/use-artists";
 import {
   downloadMessageAsPDF,
   downloadMessageAsExcel,
+  downloadImageFromBase64,
+  downloadVideoFromUrl,
 } from "@/utils/downloadUtils";
 import { useImageGeneration, useVideoGeneration } from "@/hooks/use-generation";
 import { toast } from "sonner";
@@ -941,6 +943,51 @@ const ChatPage = () => {
     setInputText(question);
   };
 
+  // Get download options based on message data type
+  const getDownloadOptions = (message: ChatMessage) => {
+    const dataType = message.dataType;
+
+    switch (dataType) {
+      case "image_base64":
+        return [
+          {
+            label: "Download Image",
+            icon: Download,
+            action: () =>
+              downloadImageFromBase64(
+                message.displayData as string,
+                message.id
+              ),
+          },
+        ];
+
+      case "video_url":
+        return [
+          {
+            label: "Download Video",
+            icon: Download,
+            action: () =>
+              downloadVideoFromUrl(message.displayData as string, message.id),
+          },
+        ];
+
+      default:
+        // For other data types, show PDF/Excel options
+        return [
+          {
+            label: "PDF",
+            icon: FileText,
+            action: () => downloadMessageAsPDF(message, message.id),
+          },
+          {
+            label: "Excel",
+            icon: FileSpreadsheet,
+            action: () => downloadMessageAsExcel(message, message.id),
+          },
+        ];
+    }
+  };
+
   // Open roster dialog and fetch artists
   const handleOpenRosterDialog = () => {
     setIsRosterDialogOpen(true);
@@ -1660,25 +1707,17 @@ const ChatPage = () => {
                                   align="end"
                                   className="w-32"
                                 >
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      downloadMessageAsPDF(message, message.id)
-                                    }
-                                  >
-                                    <FileText className="mr-2 h-3 w-3" />
-                                    PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      downloadMessageAsExcel(
-                                        message,
-                                        message.id
-                                      )
-                                    }
-                                  >
-                                    <FileSpreadsheet className="mr-2 h-3 w-3" />
-                                    Excel
-                                  </DropdownMenuItem>
+                                  {getDownloadOptions(message).map(
+                                    (option, index) => (
+                                      <DropdownMenuItem
+                                        key={index}
+                                        onClick={option.action}
+                                      >
+                                        <option.icon className="mr-2 h-3 w-3" />
+                                        {option.label}
+                                      </DropdownMenuItem>
+                                    )
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -1982,22 +2021,17 @@ const ChatPage = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem
-                              onClick={() =>
-                                downloadMessageAsPDF(message, message.id)
-                              }
-                            >
-                              <FileText className="mr-2 h-3 w-3" />
-                              PDF
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                downloadMessageAsExcel(message, message.id)
-                              }
-                            >
-                              <FileSpreadsheet className="mr-2 h-3 w-3" />
-                              Excel
-                            </DropdownMenuItem>
+                            {getDownloadOptions(message).map(
+                              (option, index) => (
+                                <DropdownMenuItem
+                                  key={index}
+                                  onClick={option.action}
+                                >
+                                  <option.icon className="mr-2 h-3 w-3" />
+                                  {option.label}
+                                </DropdownMenuItem>
+                              )
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
