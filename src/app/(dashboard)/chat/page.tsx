@@ -217,38 +217,46 @@ const ChatPage = () => {
     generatedImageData,
     showImageData,
   } = useImageGeneration((imageData) => {
-    // Create bot message with generated image
-    const botMessage: ChatMessage = {
-      id: Date.now() + 1,
-      type: "bot",
-      content: imageData.message || "Image generated successfully!",
-      timestamp: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      displayData: imageData.base64_image,
-      dataType: "image_base64",
-    };
-    setMessages((prev) => [...prev, botMessage]);
-    setHasCompletedMessageCycle(true);
-  });
-
-  const { generateVideo, isGeneratingVideo, generatedVideoData } =
-    useVideoGeneration((videoData) => {
-      // Create bot message with generated video
+    // Remove thinking message and add actual response
+    setMessages((prev) => {
+      const withoutThinking = prev.filter((msg) => !msg.isThinking);
       const botMessage: ChatMessage = {
         id: Date.now() + 1,
         type: "bot",
-        content: `Video generated successfully! Duration: ${videoData.duration}`,
+        content: imageData.message || "Image generated successfully!",
         timestamp: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
         }),
-        displayData: videoData.video_url,
-        dataType: "video_url",
+        displayData: imageData.base64_image,
+        dataType: "image_base64",
       };
-      setMessages((prev) => [...prev, botMessage]);
+      return [...withoutThinking, botMessage];
+    });
+    setHasCompletedMessageCycle(true);
+    scrollToBottom();
+  });
+
+  const { generateVideo, isGeneratingVideo, generatedVideoData } =
+    useVideoGeneration((videoData) => {
+      // Remove thinking message and add actual response
+      setMessages((prev) => {
+        const withoutThinking = prev.filter((msg) => !msg.isThinking);
+        const botMessage: ChatMessage = {
+          id: Date.now() + 1,
+          type: "bot",
+          content: `Video generated successfully! Duration: ${videoData.duration}`,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          displayData: videoData.video_url,
+          dataType: "video_url",
+        };
+        return [...withoutThinking, botMessage];
+      });
       setHasCompletedMessageCycle(true);
+      scrollToBottom();
     });
 
   // Fetch selected artists from API
@@ -821,6 +829,20 @@ const ChatPage = () => {
       return;
     }
 
+    // Add NALA thinking indicator for image generation
+    const thinkingMessage = {
+      id: Date.now() + 0.5,
+      type: "bot" as const,
+      content: "NALA is generating your image...",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isThinking: true,
+    };
+    setMessages((prev) => [...prev, thinkingMessage]);
+    scrollToBottom();
+
     generateImage({
       prompt,
       chat_session_id: currentSessionId || undefined,
@@ -839,6 +861,20 @@ const ChatPage = () => {
       toast.error("Please log in to generate videos");
       return;
     }
+
+    // Add NALA thinking indicator for video generation
+    const thinkingMessage = {
+      id: Date.now() + 0.5,
+      type: "bot" as const,
+      content: "NALA is generating your video...",
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      isThinking: true,
+    };
+    setMessages((prev) => [...prev, thinkingMessage]);
+    scrollToBottom();
 
     generateVideo({
       prompt,
@@ -1896,35 +1932,6 @@ const ChatPage = () => {
               <div className="flex flex-col items-center space-y-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">Loading chat...</p>
-              </div>
-            </div>
-          )}
-
-          {/* Loading states for generation */}
-          {(isGeneratingImage || isGeneratingVideo) && (
-            <div className="flex justify-start">
-              <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4 max-w-full">
-                <div className="flex items-center space-x-2 mb-3">
-                  <Image
-                    src="/svgs/Golden-Paw.svg"
-                    alt="Paw"
-                    width={16}
-                    height={16}
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {isGeneratingImage
-                      ? "Generating Image..."
-                      : "Generating Video..."}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm">
-                    {isGeneratingImage
-                      ? "Creating your image, please wait..."
-                      : "Creating your video, this may take a moment..."}
-                  </span>
-                </div>
               </div>
             </div>
           )}
