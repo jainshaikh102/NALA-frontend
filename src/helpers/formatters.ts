@@ -23,16 +23,16 @@ export const formatNumberCompact = (value: any): string => {
   const sign = num < 0 ? "-" : "";
 
   if (absNum >= 1e12) {
-    return sign + (absNum / 1e12).toFixed(1).replace(/\.0$/, "") + "T";
+    return sign + (absNum / 1e12).toFixed(2) + "T";
   }
   if (absNum >= 1e9) {
-    return sign + (absNum / 1e9).toFixed(1).replace(/\.0$/, "") + "B";
+    return sign + (absNum / 1e9).toFixed(2) + "B";
   }
   if (absNum >= 1e6) {
-    return sign + (absNum / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+    return sign + (absNum / 1e6).toFixed(2) + "M";
   }
   if (absNum >= 1e3) {
-    return sign + (absNum / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+    return sign + (absNum / 1e3).toFixed(2) + "K";
   }
 
   return num.toLocaleString();
@@ -76,16 +76,16 @@ export const formatCurrencyCompact = (value: any): string => {
   const sign = num < 0 ? "-" : "";
 
   if (absNum >= 1e12) {
-    return sign + "$" + (absNum / 1e12).toFixed(1).replace(/\.0$/, "") + "T";
+    return sign + "$" + (absNum / 1e12).toFixed(2) + "T";
   }
   if (absNum >= 1e9) {
-    return sign + "$" + (absNum / 1e9).toFixed(1).replace(/\.0$/, "") + "B";
+    return sign + "$" + (absNum / 1e9).toFixed(2) + "B";
   }
   if (absNum >= 1e6) {
-    return sign + "$" + (absNum / 1e6).toFixed(1).replace(/\.0$/, "") + "M";
+    return sign + "$" + (absNum / 1e6).toFixed(2) + "M";
   }
   if (absNum >= 1e3) {
-    return sign + "$" + (absNum / 1e3).toFixed(1).replace(/\.0$/, "") + "K";
+    return sign + "$" + (absNum / 1e3).toFixed(2) + "K";
   }
 
   return sign + "$" + num.toLocaleString();
@@ -132,7 +132,14 @@ export const formatSmartValue = (key: string, value: any): string => {
     return value; // Return original if we can't parse it
   }
 
-  const num = typeof value === "number" ? value : parseFloat(String(value));
+  // Handle string values with commas (like "50,593,385")
+  let num: number;
+  if (typeof value === "string") {
+    // Remove commas and parse as number
+    num = parseFloat(value.replace(/,/g, ""));
+  } else {
+    num = typeof value === "number" ? value : parseFloat(String(value));
+  }
 
   if (isNaN(num)) {
     return String(value);

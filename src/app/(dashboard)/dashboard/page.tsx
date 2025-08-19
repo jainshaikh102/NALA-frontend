@@ -121,9 +121,9 @@ export default function DashboardPage() {
             {chats.map((chat) => (
               <Card
                 key={chat.id}
-                className="bg-secondary transition-all duration-200 cursor-pointer hover:scale-105 overflow-hidden"
+                className="bg-background h-full rounded-xl flex flex-col justify-between min-h-[140px] sm:min-h-[160px]"
               >
-                <CardContent className="p-4 sm:p-6 bg-background h-full mx-2 sm:mx-4 rounded-xl flex flex-col justify-between min-h-[140px] sm:min-h-[160px]">
+                <CardContent className="">
                   <div className="flex items-start justify-between mb-4 sm:mb-6">
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-secondary rounded-full flex items-center justify-center">
                       <Button
@@ -140,6 +140,14 @@ export default function DashboardPage() {
                         />
                       </Button>
                     </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-400 hover:text-white p-1 h-auto w-auto"
+                    >
+                      <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </Button>
                   </div>
 
                   <div className="flex items-end justify-between">
@@ -164,6 +172,50 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             ))}
+            {/* <div className="w-full min-h-[100px] sm:min-h-[100px] lg:min-h-[120px] bg-[url('/svgs/FileContainer.svg')] bg-no-repeat bg-center bg-contain p-4 sm:p-6 lg:p-6 xl:px-20 xl:py-10">
+              <div className="p-4 sm:p-6 lg:p-8 xl:p-12 bg-background h-full rounded-xl flex flex-col justify-between min-h-[140px] sm:min-h-[200px]">
+                <div className="flex items-start justify-end">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-gray-400 hover:text-white p-1 h-auto w-auto"
+                  >
+                    <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </Button>
+                </div>
+
+                <div className="flex items-end justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-secondary rounded-full flex items-center justify-center">
+                      <Image
+                        src={"/svgs/Text-Icon.svg"}
+                        alt={"textIcon"}
+                        width={16}
+                        height={16}
+                        className={"opacity-70 sm:w-5 sm:h-5"}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-white font-semibold text-lg sm:text-xl mb-1">
+                        Daily Chat
+                      </h3>
+                      <p className="text-muted-foreground text-xs sm:text-sm">
+                        01 Jan 2025
+                      </p>
+                    </div>
+                  </div>
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center ml-2 sm:ml-4">
+                    <Image
+                      src="/svgs/Golden-Paw.svg"
+                      alt="Paw"
+                      width={60}
+                      height={60}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div> */}
           </div>
         </div>
       </div>
