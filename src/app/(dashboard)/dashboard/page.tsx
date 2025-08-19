@@ -24,80 +24,9 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#222C41] text-white p-4 sm:p-6 lg:p-8 rounded-2xl border border-[#FFFFFF3B]">
       <div className="w-full mx-auto p-4 sm:p-8 lg:p-16">
-        {/* Header Section */}
-
-        {/* <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-8 lg:gap-0 bg-transparent border-b-[1px] border-b-[#FFFFFF4D] h-[460px] relative">
-          <div className="flex flex-col w-full lg:w-7/12 h-full space-y-4">
-            <div>
-              <div className="flex items-center justify-start gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 flex items-center justify-center">
-                  <Image
-                    src="/svgs/Golden-Paw.svg"
-                    alt="Paw"
-                    width={68}
-                    height={68}
-                    className="w-full h-full"
-                  />
-                </div>
-                <h1 className="text-[48px] font-bold italic">NALA</h1>
-              </div>
-              <p className="text-[40px] text-[#FFFFFF]">
-                Your AI-powered music assistant.🎧
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-4 lg:mb-8 mt-12">
-              <Button
-                variant="default"
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-full w-full sm:w-60"
-                onClick={() => router.push("/chat")}
-              >
-                START NEW CHAT
-              </Button>
-
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 mb-6 lg:mb-8 mt-8">
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="bg-secondary border-gray-500 text-gray-300 hover:bg-gray-700 rounded-full"
-                >
-                  Explore Valuation Engine
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="bg-secondary border-gray-500 text-gray-300 hover:bg-gray-700 rounded-full"
-                >
-                  Join Our App
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="bg-secondary border-gray-500 text-gray-300 hover:bg-gray-700 rounded-full"
-                >
-                  Get Weekly Score for your Catalog
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden lg:flex lg:w-5/12 h-full relative ">
-            <div className="w-full h-full flex items-center justify-center">
-              <Image
-                src="/svgs/Bot-Lion.svg"
-                alt="NALA Bot Lion"
-                width={550}
-                height={500}
-                className="object-contain max-w-full h-auto"
-              />
-            </div>
-          </div>
-        </div> */}
-
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between w-full gap-8 lg:gap-0 bg-transparent border-b border-b-[#FFFFFF4D] min-h-[300px] lg:min-h-[460px] relative py-8">
           {/* Left Content */}
-          <div className="flex flex-col w-full lg:w-7/12 h-full space-y-4">
+          <div className="flex flex-col w-full lg:w-7/12 h-full space-y-8">
             {/* Header */}
             <div className="space-y-4">
               <div className="flex items-center justify-start gap-3">
@@ -114,23 +43,29 @@ export default function DashboardPage() {
                   NALA
                 </h1>
               </div>
+
               <p className="text-xl sm:text-2xl lg:text-4xl text-[#FFFFFF]">
                 Your AI-powered music assistant.🎧
+              </p>
+
+              <p className="text-lg sm:text-xl lg:text-2xl text-[#FFFFFF] italic">
+                Tracks analytics, catalog valuation, and investor insights - in
+                real time
               </p>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col gap-4 lg:mb-8 mt-8 sm:mt-12">
+            <div className="flex flex-col gap-4 space-y-4">
               <Button
                 variant="default"
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-full w-full sm:w-60"
+                className="bg-primary hover:bg-primary/90 text-white px-6 rounded-full w-full sm:w-60"
                 onClick={() => router.push("/chat")}
               >
                 START NEW CHAT
               </Button>
 
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4 mb-6 lg:mb-8 mt-8">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
                 <Button
                   variant="outline"
                   size="lg"
@@ -154,6 +89,10 @@ export default function DashboardPage() {
                 </Button>
               </div>
             </div>
+
+            <p className="text-lg sm:text-xl lg:text-2xl text-[#FFFFFF] tracking-widest">
+              Audience Growth | Streaming Trends | Deal Readiness
+            </p>
           </div>
 
           {/* Right Content with Lion and Divider */}
