@@ -213,41 +213,134 @@ interface ComplexResponseData {
   };
 }
 
-// Text Display Component with Markdown Support
+// Text Display Component with Enhanced Formatting
 export const TextDisplay: React.FC<{ content: string }> = ({ content }) => {
-  const parseMarkdown = (text: string) => {
+  const formatVariableName = (varName: string): string => {
+    // Convert snake_case to Title Case and handle special cases
+    return varName
+      .replace(/_/g, " ")
+      .replace(/\\/g, " ") // Remove backslashes and replace with spaces
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .replace(/\s+/g, " ") // Replace multiple spaces with single space
+      .trim(); // Remove leading/trailing spaces
+  };
+
+  const formatEarningsValue = (value: string): string => {
+    // Check if it's a numeric value that should be formatted as currency
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue)) {
+      // Add dollar sign if it's an earnings value
+      return `$${numericValue.toLocaleString()}`;
+    }
+    return value;
+  };
+
+  const parseEnhancedMarkdown = (text: string) => {
     // Split text by lines to handle line breaks properly
     const lines = text.split("\n");
 
     return lines.map((line, lineIndex) => {
-      // Parse bold text (**text**)
-      const parts = line.split(/(\*\*.*?\*\*)/g);
+      // Handle markdown headers (### **text**)
+      if (line.trim().startsWith("###")) {
+        const headerContent = line
+          .replace(/^###\s*/, "")
+          .replace(/\*\*/g, "")
+          .trim();
 
-      const parsedLine = parts.map((part, partIndex) => {
-        if (part.startsWith("**") && part.endsWith("**")) {
-          // Remove the ** and make it bold
-          const boldText = part.slice(2, -2);
+        return (
+          <div key={lineIndex} className="mb-3 mt-4">
+            <h3 className="font-bold text-lg text-foreground">
+              {headerContent}
+            </h3>
+          </div>
+        );
+      }
+
+      // Handle bullet points - convert * to •, but handle them as regular text without bullets
+      if (
+        line.trim().startsWith("- **") ||
+        (line.trim().startsWith("*") && !line.trim().startsWith("**"))
+      ) {
+        const bulletContent = line.replace(/^\s*[-*]\s*/, "").trim();
+
+        // Check if this is a key-value pair (contains colon)
+        if (bulletContent.includes(":")) {
+          const [key, value] = bulletContent.split(":", 2);
+          // Remove ** from both key and value if present
+          const cleanKey = key.replace(/\*\*/g, "").trim();
+          const cleanValue = value ? value.replace(/\*\*/g, "").trim() : "";
+          const formattedKey = formatVariableName(cleanKey);
+          const formattedValue = cleanValue
+            ? formatEarningsValue(cleanValue)
+            : "";
+
           return (
-            <strong key={`${lineIndex}-${partIndex}`} className="font-semibold">
-              {boldText}
-            </strong>
+            <div key={lineIndex} className="flex items-start gap-2 mb-1">
+              <span className="text-white mt-1 text-sm">•</span>
+              <div className="flex-1">
+                <span className="font-semibold text-base text-foreground">
+                  {formattedKey}:
+                </span>
+                {formattedValue && (
+                  <span className="ml-2 text-white">{formattedValue}</span>
+                )}
+              </div>
+            </div>
+          );
+        } else {
+          // Regular bullet point content with dot
+          const cleanContent = bulletContent.replace(/\*\*/g, "");
+          return (
+            <div key={lineIndex} className="flex items-start gap-2 mb-1">
+              <span className="text-white mt-1 text-sm">•</span>
+              <span className="text-white">{cleanContent}</span>
+            </div>
           );
         }
-        return part;
-      });
+      }
 
+      // Handle regular lines that might contain bold text
+      if (line.trim()) {
+        // Parse bold text (**text**) but remove the markdown
+        const parts = line.split(/(\*\*.*?\*\*)/g);
+
+        const parsedLine = parts.map((part, partIndex) => {
+          if (part.startsWith("**") && part.endsWith("**")) {
+            // Remove the ** and make it bold and slightly bigger
+            const boldText = part.slice(2, -2);
+            return (
+              <strong
+                key={`${lineIndex}-${partIndex}`}
+                className="font-bold text-lg"
+              >
+                {boldText}
+              </strong>
+            );
+          }
+          return part;
+        });
+
+        return (
+          <div key={lineIndex} className="mb-1">
+            {parsedLine}
+          </div>
+        );
+      }
+
+      // Empty lines
       return (
-        <span key={lineIndex}>
-          {parsedLine}
-          {lineIndex < lines.length - 1 && <br />}
-        </span>
+        <div key={lineIndex} className="mb-1">
+          <br />
+        </div>
       );
     });
   };
 
   return (
     <div className="prose prose-sm max-w-none">
-      <div className="text-foreground">{parseMarkdown(content)}</div>
+      <div className="text-white space-y-1">
+        {parseEnhancedMarkdown(content)}
+      </div>
     </div>
   );
 };
@@ -488,7 +581,7 @@ export const KeyValueDisplay: React.FC<{
       )}
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {entries.map(([key, value], index) => {
           const formattedLabel = convertSnakeCaseToTitleCase(key);
           const formattedValue = formatSmartValue(key, value);
