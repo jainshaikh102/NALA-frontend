@@ -258,6 +258,48 @@ const ChatPage = () => {
     }
   };
 
+  // Combined sources and notes data
+  const getCombinedSourcesAndNotes = () => {
+    const combinedItems: Array<{
+      id: string;
+      type: "source" | "note";
+      name: string;
+      icon: string;
+      data: any;
+    }> = [];
+
+    // Add sources (assuming sources is an object with documents array)
+    if (sources && typeof sources === "object" && "documents" in sources) {
+      const sourcesData = sources as any;
+      if (sourcesData.documents && Array.isArray(sourcesData.documents)) {
+        sourcesData.documents.forEach((source: any, index: number) => {
+          combinedItems.push({
+            id: `source-${source?.document_id || index}`,
+            type: "source",
+            name: source?.file_name || "Unknown file",
+            icon: getFileTypeIcon(source?.file_name || ""),
+            data: source,
+          });
+        });
+      }
+    }
+
+    // Add notes
+    if (notes && Array.isArray(notes)) {
+      notes.forEach((note: string, index: number) => {
+        combinedItems.push({
+          id: `note-${index}`,
+          type: "note",
+          name: note.length > 50 ? `${note.substring(0, 50)}...` : note,
+          icon: "📝",
+          data: note,
+        });
+      });
+    }
+
+    return combinedItems;
+  };
+
   // Generation hooks with callbacks to create bot messages
   const {
     generateImage,
@@ -819,11 +861,30 @@ const ChatPage = () => {
     }
 
     try {
-      // Simulate GCS upload (replace with actual GCS upload logic)
-      const gcsUrl = `gs://nala-rag/${file.name}`;
-
       toast.success(`Uploading ${file.name}...`);
 
+      // Create FormData to send file to API route
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("username", user.username);
+      formData.append("chat_session_id", currentSessionId);
+
+      // Send file to API route for GCS upload
+      const response = await fetch("/api/googleStorage/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+
+      const { success, gcsUrl, fileName } = await response.json();
+
+      if (!success) {
+        throw new Error("Upload failed");
+      }
       // Upload to RAG system
       uploadSource({
         gcs_url: gcsUrl,
@@ -1244,42 +1305,62 @@ const ChatPage = () => {
                 </Dialog>
               </div>
 
-              {/* Sources List */}
+              {/* Combined Sources and Notes List */}
               <div className="p-4 space-y-3 border-b border-border">
-                {isLoadingSources ? (
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Sources{" "}
+                    <span className="text-sm text-muted-foreground">
+                      ({getCombinedSourcesAndNotes().length})
+                    </span>
+                  </h2>
+                </div>
+
+                {isLoadingSources || isLoadingNotes ? (
                   <div className="flex items-center justify-center py-4">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     <span className="text-sm text-muted-foreground">
-                      Loading sources...
+                      Loading sources and notes...
                     </span>
-                    m
                   </div>
-                ) : sources?.documents?.length > 0 ? (
-                  sources?.documents?.map((source, index) => (
+                ) : getCombinedSourcesAndNotes().length > 0 ? (
+                  getCombinedSourcesAndNotes().map((item) => (
                     <div
-                      key={index}
+                      key={item.id}
                       className="flex items-center justify-between p-3 bg-secondary/50 hover:bg-secondary/80 transition-colors cursor-pointer rounded-full"
                     >
                       <div className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-[#FFFFFF4D] rounded-full flex items-center justify-center">
-                          <span className="text-xs">
-                            {getFileTypeIcon(source?.file_name)}
+                          <span className="text-xs">{item.icon}</span>
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm text-foreground truncate">
+                            {item.name.slice(0, 10)}...
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.type === "source" ? "Source" : "Note"}
                           </span>
                         </div>
-                        <span className="text-sm text-foreground truncate">
-                          {source?.file_name}
-                        </span>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-red-500 hover:text-red-700"
-                        onClick={() =>
-                          deleteSource({ document_id: source?.document_id })
-                        }
-                        disabled={isDeletingSource}
+                        onClick={() => {
+                          if (item.type === "source") {
+                            deleteSource({
+                              document_id: item.data?.document_id,
+                            });
+                          } else {
+                            removeNote({
+                              chat_session_id: currentSessionId!,
+                              note_item: item.data,
+                            });
+                          }
+                        }}
+                        disabled={isDeletingSource || isRemovingNote}
                       >
-                        {isDeletingSource ? (
+                        {isDeletingSource || isRemovingNote ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <X className="h-3 w-3" />
@@ -1290,8 +1371,8 @@ const ChatPage = () => {
                 ) : (
                   <div className="text-center py-4 text-muted-foreground text-sm">
                     {currentSessionId
-                      ? "No sources added to this chat"
-                      : "Select a chat session to manage sources"}
+                      ? "No sources or notes added to this chat"
+                      : "Select a chat session to manage sources and notes"}
                   </div>
                 )}
               </div>
@@ -1672,6 +1753,78 @@ const ChatPage = () => {
                     </div>
                   </DialogContent>
                 </Dialog>
+              </div>
+
+              {/* Combined Sources and Notes List - Mobile */}
+              <div className="p-4 space-y-3 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Sources & Notes{" "}
+                    <span className="text-sm text-muted-foreground">
+                      ({getCombinedSourcesAndNotes().length})
+                    </span>
+                  </h2>
+                </div>
+
+                {isLoadingSources || isLoadingNotes ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading sources and notes...
+                    </span>
+                  </div>
+                ) : getCombinedSourcesAndNotes().length > 0 ? (
+                  getCombinedSourcesAndNotes().map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-3 bg-secondary/50 hover:bg-secondary/80 transition-colors cursor-pointer rounded-full"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-6 h-6 bg-[#FFFFFF4D] rounded-full flex items-center justify-center">
+                          <span className="text-xs">{item.icon}</span>
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm text-foreground truncate">
+                            {item.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.type === "source" ? "Source" : "Note"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          if (item.type === "source") {
+                            deleteSource({
+                              document_id: item.data?.document_id,
+                            });
+                          } else {
+                            removeNote({
+                              chat_session_id: currentSessionId!,
+                              note_item: item.data,
+                            });
+                          }
+                        }}
+                        disabled={isDeletingSource || isRemovingNote}
+                      >
+                        {isDeletingSource || isRemovingNote ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    {currentSessionId
+                      ? "No sources or notes added to this chat"
+                      : "Select a chat session to manage sources and notes"}
+                  </div>
+                )}
               </div>
 
               {/* Rosters Section */}
