@@ -1,51 +1,43 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
-// Interface for chat message data
-interface ChatMessage {
-  id: number;
-  type: "user" | "bot";
-  content: string;
-  timestamp: string;
-  displayData?: unknown;
-  dataType?: string;
-  queryStr?: string;
-  status?: boolean;
-}
+// Import download components
+import {
+  downloadDataFrameAsPDF,
+  downloadDataFrameAsExcel,
+  downloadKeyValueAsPDF,
+  downloadKeyValueAsExcel,
+  downloadForecastDataAsPDF,
+  downloadForecastDataAsExcel,
+  downloadMultiSectionReportAsPDF,
+  downloadMultiSectionReportAsExcel,
+  downloadViralityReportAsPDF,
+  downloadViralityReportAsExcel,
+  downloadTextAsPDF,
+  downloadTextAsExcel,
+  ChatMessage,
+  DataFrameData,
+  KeyValueData,
+  ForecastChartData,
+  ExtractedData,
+  MultiSectionReportData,
+  ViralityReportData,
+} from "../components/DownloadDataType";
 
-// Interface for dataframe structure
-interface DataFrameData {
-  dataframe: {
-    index: any[];
-    columns: string[];
-    data: any[][];
-  };
-}
+// Re-export image and video download functions for external use
+export {
+  downloadImageFromBase64,
+  downloadVideoFromUrl,
+} from "../components/DownloadDataType";
 
-// Interface for key-value data
-interface KeyValueData {
-  data: Record<string, any>;
-}
-
-// Interface for forecast chart data
-interface ForecastChartData {
-  historical_data?: {
-    index: any[];
-    columns: string[];
-    data: any[][];
-  };
-  forecast_data?: {
-    index: any[];
-    columns: string[];
-    data: any[][];
-  };
-}
+// Interfaces are now imported from DownloadDataType components
 
 // Utility function to extract data from different response types
 const extractDataFromResponse = (message: ChatMessage) => {
   const { displayData, dataType, content } = message;
+
+  // console.log("extractDataFromResponse: Processing message", { dataType, displayData });
 
   if (!displayData) {
     return { type: "text", data: content };
@@ -161,74 +153,7 @@ export const downloadMessageAsPDF = (
   }
 };
 
-// Download Image from Base64
-export const downloadImageFromBase64 = (
-  base64Data: string,
-  messageIndex?: number
-) => {
-  try {
-    if (!base64Data) {
-      toast.error("No image data to download");
-      return;
-    }
-
-    toast.loading("Preparing image download...", { id: "image-download" });
-
-    // Create a link element and trigger download
-    const link = document.createElement("a");
-    link.href = `data:image/png;base64,${base64Data}`;
-    link.download = `nala-generated-image-${messageIndex || "single"}-${
-      new Date().toISOString().split("T")[0]
-    }.png`;
-
-    // Append to body, click, and remove
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success("Image downloaded successfully!", { id: "image-download" });
-  } catch (error) {
-    console.error("Error downloading image:", error);
-    toast.error("Failed to download image. Please try again.", {
-      id: "image-download",
-    });
-  }
-};
-
-// Download Video from URL
-export const downloadVideoFromUrl = (
-  videoUrl: string,
-  messageIndex?: number
-) => {
-  try {
-    if (!videoUrl) {
-      toast.error("No video URL to download");
-      return;
-    }
-
-    toast.loading("Preparing video download...", { id: "video-download" });
-
-    // Create a link element and trigger download
-    const link = document.createElement("a");
-    link.href = videoUrl;
-    link.download = `nala-generated-video-${messageIndex || "single"}-${
-      new Date().toISOString().split("T")[0]
-    }.mp4`;
-    link.target = "_blank"; // Open in new tab as fallback
-
-    // Append to body, click, and remove
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success("Video download started!", { id: "video-download" });
-  } catch (error) {
-    console.error("Error downloading video:", error);
-    toast.error("Failed to download video. Please try again.", {
-      id: "video-download",
-    });
-  }
-};
+// Image and Video download functions are now imported from DownloadDataType components
 
 // Single Message Excel Download
 export const downloadMessageAsExcel = (
@@ -241,6 +166,7 @@ export const downloadMessageAsExcel = (
       return;
     }
 
+    // console.log("downloadChatAsExcel: Starting Excel generation", { message, messageIndex });
     toast.loading("Generating Excel file...", { id: "excel-download" });
 
     const workbook = XLSX.utils.book_new();
@@ -314,7 +240,7 @@ export const downloadChatAsPDF = (
     yPosition += 20;
 
     // Process each message
-    messages.forEach((message, index) => {
+    messages.forEach((message) => {
       // Check if we need a new page
       if (yPosition > pageHeight - 40) {
         doc.addPage();
@@ -377,7 +303,7 @@ export const downloadChatAsPDF = (
 // Helper function to add different data types to PDF
 const addDataToPDF = (
   doc: jsPDF,
-  extractedData: any,
+  extractedData: ExtractedData,
   yPosition: number,
   margin: number,
   pageWidth: number,
@@ -387,7 +313,7 @@ const addDataToPDF = (
 
   switch (type) {
     case "dataframe":
-      return addDataFrameToPDF(
+      return downloadDataFrameAsPDF(
         doc,
         data,
         yPosition,
@@ -397,7 +323,7 @@ const addDataToPDF = (
       );
 
     case "key_value":
-      return addKeyValueToPDF(
+      return downloadKeyValueAsPDF(
         doc,
         data,
         yPosition,
@@ -407,7 +333,37 @@ const addDataToPDF = (
       );
 
     case "forecast_chart":
-      return addForecastDataToPDF(
+      return downloadForecastDataAsPDF(
+        doc,
+        data,
+        yPosition,
+        margin,
+        pageWidth,
+        pageHeight
+      );
+
+    case "multi_section_report":
+      return downloadMultiSectionReportAsPDF(
+        doc,
+        data,
+        yPosition,
+        margin,
+        pageWidth,
+        pageHeight
+      );
+
+    case "virality_report":
+      return downloadViralityReportAsPDF(
+        doc,
+        data,
+        yPosition,
+        margin,
+        pageWidth,
+        pageHeight
+      );
+
+    case "text":
+      return downloadTextAsPDF(
         doc,
         data,
         yPosition,
@@ -421,127 +377,7 @@ const addDataToPDF = (
   }
 };
 
-// Add dataframe to PDF
-const addDataFrameToPDF = (
-  doc: jsPDF,
-  data: DataFrameData,
-  yPosition: number,
-  margin: number,
-  pageWidth: number,
-  pageHeight: number
-): number => {
-  if (!data?.dataframe) return yPosition;
-
-  const { columns, data: rows } = data.dataframe;
-
-  // Check if we need a new page
-  if (yPosition > pageHeight - 100) {
-    doc.addPage();
-    yPosition = margin;
-  }
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Data Table:", margin, yPosition);
-  yPosition += 10;
-
-  // Create table
-  autoTable(doc, {
-    head: [columns],
-    body: rows,
-    startY: yPosition,
-    margin: { left: margin, right: margin },
-    styles: { fontSize: 8 },
-    headStyles: { fillColor: [66, 139, 202] },
-  });
-
-  return (doc as any).lastAutoTable.finalY + 10;
-};
-
-// Add key-value data to PDF
-const addKeyValueToPDF = (
-  doc: jsPDF,
-  data: KeyValueData,
-  yPosition: number,
-  margin: number,
-  pageWidth: number,
-  pageHeight: number
-): number => {
-  if (!data?.data) return yPosition;
-
-  // Check if we need a new page
-  if (yPosition > pageHeight - 100) {
-    doc.addPage();
-    yPosition = margin;
-  }
-
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Metrics:", margin, yPosition);
-  yPosition += 10;
-
-  const tableData = Object.entries(data.data).map(([key, value]) => [
-    key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-    String(value),
-  ]);
-
-  autoTable(doc, {
-    head: [["Metric", "Value"]],
-    body: tableData,
-    startY: yPosition,
-    margin: { left: margin, right: margin },
-    styles: { fontSize: 9 },
-    headStyles: { fillColor: [66, 139, 202] },
-  });
-
-  return (doc as any).lastAutoTable.finalY + 10;
-};
-
-// Add forecast data to PDF
-const addForecastDataToPDF = (
-  doc: jsPDF,
-  data: ForecastChartData,
-  yPosition: number,
-  margin: number,
-  pageWidth: number,
-  pageHeight: number
-): number => {
-  let currentY = yPosition;
-
-  if (data.historical_data) {
-    currentY = addDataFrameToPDF(
-      doc,
-      { dataframe: data.historical_data },
-      currentY,
-      margin,
-      pageWidth,
-      pageHeight
-    );
-  }
-
-  if (data.forecast_data) {
-    if (currentY > pageHeight - 100) {
-      doc.addPage();
-      currentY = margin;
-    }
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("Forecast Data:", margin, currentY);
-    currentY += 10;
-
-    currentY = addDataFrameToPDF(
-      doc,
-      { dataframe: data.forecast_data },
-      currentY,
-      margin,
-      pageWidth,
-      pageHeight
-    );
-  }
-
-  return currentY;
-};
+// PDF helper functions are now in individual DownloadDataType components
 
 // Excel Generation Functions
 export const downloadChatAsExcel = (
@@ -606,7 +442,7 @@ export const downloadChatAsExcel = (
 // Helper function to add data to Excel workbook
 const addDataToExcel = (
   workbook: XLSX.WorkBook,
-  extractedData: any,
+  extractedData: ExtractedData,
   messageIndex: number,
   sheetIndex: number
 ) => {
@@ -614,77 +450,35 @@ const addDataToExcel = (
 
   switch (type) {
     case "dataframe":
-      addDataFrameToExcel(workbook, data, messageIndex, sheetIndex);
+      downloadDataFrameAsExcel(workbook, data, messageIndex, sheetIndex);
       break;
 
     case "key_value":
-      addKeyValueToExcel(workbook, data, messageIndex, sheetIndex);
+      downloadKeyValueAsExcel(workbook, data, messageIndex, sheetIndex);
       break;
 
     case "forecast_chart":
-      addForecastDataToExcel(workbook, data, messageIndex, sheetIndex);
+      downloadForecastDataAsExcel(workbook, data, messageIndex, sheetIndex);
+      break;
+
+    case "multi_section_report":
+      downloadMultiSectionReportAsExcel(
+        workbook,
+        data,
+        messageIndex,
+        sheetIndex
+      );
+      break;
+
+    case "virality_report":
+      // console.log("downloadUtils: Processing virality_report for Excel", data);
+      downloadViralityReportAsExcel(workbook, data, messageIndex, sheetIndex);
+      break;
+
+    case "text":
+      downloadTextAsExcel(workbook, data, messageIndex, sheetIndex);
       break;
   }
 };
 
-// Add dataframe to Excel
-const addDataFrameToExcel = (
-  workbook: XLSX.WorkBook,
-  data: DataFrameData,
-  messageIndex: number,
-  sheetIndex: number
-) => {
-  if (!data?.dataframe) return;
-
-  const { columns, data: rows } = data.dataframe;
-  const sheetData = [columns, ...rows];
-  const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-
-  const sheetName = `Data_Msg${messageIndex}`;
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-};
-
-// Add key-value data to Excel
-const addKeyValueToExcel = (
-  workbook: XLSX.WorkBook,
-  data: KeyValueData,
-  messageIndex: number,
-  sheetIndex: number
-) => {
-  if (!data?.data) return;
-
-  const sheetData = Object.entries(data.data).map(([key, value]) => ({
-    Metric: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
-    Value: value,
-  }));
-
-  const worksheet = XLSX.utils.json_to_sheet(sheetData);
-  const sheetName = `Metrics_Msg${messageIndex}`;
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-};
-
-// Add forecast data to Excel
-const addForecastDataToExcel = (
-  workbook: XLSX.WorkBook,
-  data: ForecastChartData,
-  messageIndex: number,
-  sheetIndex: number
-) => {
-  if (data.historical_data) {
-    addDataFrameToExcel(
-      workbook,
-      { dataframe: data.historical_data },
-      messageIndex,
-      sheetIndex
-    );
-  }
-
-  if (data.forecast_data) {
-    const { columns, data: rows } = data.forecast_data;
-    const sheetData = [columns, ...rows];
-    const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
-
-    const sheetName = `Forecast_Msg${messageIndex}`;
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-  }
-};
+// Excel helper functions are now in individual DownloadDataType components
