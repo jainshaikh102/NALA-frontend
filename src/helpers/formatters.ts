@@ -120,6 +120,61 @@ export const isEarningsValue = (key: string): boolean => {
   );
 };
 
+// Function to detect if a value is likely a year
+export const isYearValue = (key: string, value: any): boolean => {
+  const num = typeof value === "number" ? value : parseFloat(String(value));
+
+  if (isNaN(num)) {
+    return false;
+  }
+
+  // Check if key suggests it's a year
+  const yearKeywords = ["year", "yr", "date", "time", "Year"];
+  const lowerKey = key.toLowerCase();
+  const hasYearKeyword = yearKeywords.some((keyword) =>
+    lowerKey.includes(keyword)
+  );
+
+  // Check if value is in typical year range (1900-2100)
+  const isYearRange = num >= 1900 && num <= 2100 && Number.isInteger(num);
+
+  return hasYearKeyword || isYearRange;
+};
+
+// Function to detect if a value should not be formatted with K/M/B (IDs, codes, etc.)
+export const shouldNotFormat = (key: string, value: any): boolean => {
+  const num = typeof value === "number" ? value : parseFloat(String(value));
+
+  if (isNaN(num)) {
+    return false;
+  }
+
+  // Check if key suggests it's an ID or code
+  const idKeywords = [
+    "id",
+    "code",
+    "number",
+    "num",
+    "index",
+    "rank",
+    "position",
+  ];
+  const lowerKey = key.toLowerCase();
+  const hasIdKeyword = idKeywords.some((keyword) => lowerKey.includes(keyword));
+
+  // If it's an ID-like field, don't format
+  if (hasIdKeyword) {
+    return true;
+  }
+
+  // Check if it's a year
+  if (isYearValue(key, value)) {
+    return true;
+  }
+
+  return false;
+};
+
 // Smart value formatter that detects earnings and applies appropriate formatting
 export const formatSmartValue = (key: string, value: any): string => {
   // Handle already formatted currency strings by extracting the number and reformatting
@@ -143,6 +198,11 @@ export const formatSmartValue = (key: string, value: any): string => {
 
   if (isNaN(num)) {
     return String(value);
+  }
+
+  // Check if this value should not be formatted (years, IDs, etc.)
+  if (shouldNotFormat(key, num)) {
+    return String(Math.round(num));
   }
 
   // Check if this is an earnings-related value

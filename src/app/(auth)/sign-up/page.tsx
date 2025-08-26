@@ -23,6 +23,7 @@ const signUpSchema = z
       .string()
       .min(1, "Email is required")
       .email("Please enter a valid email address"),
+    username: z.string(),
     password: z
       .string()
       .min(1, "Password is required")
@@ -52,6 +53,7 @@ export default function SignUpPage() {
   const onSubmit = (data: SignUpFormData) => {
     const registerData = {
       email: data.email,
+      username: data.username,
       password: data.password,
       confirm_password: data.confirmPassword,
       full_name: data.full_name,
@@ -66,13 +68,13 @@ export default function SignUpPage() {
 
   return (
     <div
-      className="min-h-screen flex"
-      style={{ backgroundColor: "var(--container)" }}
+      className="min-h-screen flex bg-background p-10"
+      // style={{ backgroundColor: "var(--container)" }}
     >
-      <div className="flex-1 flex flex-row items-center w-full justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-background rounded-3xl">
+      <div className="flex-1 flex flex-row items-center w-full justify-center py-12 px-4 sm:px-6 lg:flex-none lg:px-20 xl:px-24 bg-[#222C41] rounded-3xl">
         {/* Left Side - Form */}
         <div className="flex-1 flex items-center justify-center px-8 lg:px-16">
-          <div className="w-full max-w-md space-y-8">
+          <div className="w-full max-w-2xl space-y-8">
             {/* Header */}
             <div className="text-center space-y-4">
               <div className="flex items-center justify-center space-x-2">
@@ -100,44 +102,102 @@ export default function SignUpPage() {
 
             {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Full Name Field */}
-              <div className="space-y-2">
-                <div
-                  className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
-                    errors.full_name
-                      ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
-                      : "focus-within:ring-2 focus-within:ring-primary"
-                  }`}
-                >
-                  {/* Icon */}
-                  <User className="text-primary h-5 w-5" />
+              <div className="grid grid-cols-2 gap-4">
+                {/* Full Name Field */}
+                <div className="space-y-2">
+                  <div
+                    className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                      errors.full_name
+                        ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                        : "focus-within:ring-2 focus-within:ring-primary"
+                    }`}
+                  >
+                    {/* Icon */}
+                    {/* <User className="text-primary h-5 w-5" /> */}
 
-                  {/* Divider */}
-                  <div className="w-px h-8 bg-primary"></div>
-
-                  {/* Label + Input */}
-                  <div className="flex flex-col flex-1 justify-center">
-                    <Label
-                      htmlFor="full_name"
-                      className="text-sm text-muted-foreground px-2"
-                    >
-                      Full Name
-                    </Label>
-                    <Input
-                      id="full_name"
-                      {...register("full_name")}
-                      type="text"
-                      placeholder="John Doe"
-                      className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2"
+                    <Image
+                      alt=""
+                      src={"/svgs/UserIcon.svg"}
+                      width={20}
+                      height={20}
+                      className="text-primary h-5 w-5"
                     />
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-primary"></div>
+
+                    {/* Label + Input */}
+                    <div className="flex flex-col flex-1 justify-center">
+                      <Label
+                        htmlFor="full_name"
+                        className="text-sm text-muted-foreground px-2"
+                      >
+                        Full Name
+                      </Label>
+                      <Input
+                        id="full_name"
+                        {...register("full_name")}
+                        type="text"
+                        placeholder="John Doe"
+                        className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2"
+                      />
+                    </div>
                   </div>
+
+                  {errors.full_name && (
+                    <p className="text-sm text-destructive">
+                      {errors.full_name.message}
+                    </p>
+                  )}
                 </div>
 
-                {errors.full_name && (
-                  <p className="text-sm text-destructive">
-                    {errors.full_name.message}
-                  </p>
-                )}
+                {/* Username Field */}
+                <div className="space-y-2">
+                  <div
+                    className={`flex items-center gap-2 p-4 border border-[#FFFFFF4D] rounded-xl bg-transparent min-h-[4rem] ${
+                      errors.username
+                        ? "border-destructive focus-within:ring-2 focus-within:ring-destructive"
+                        : "focus-within:ring-2 focus-within:ring-primary"
+                    }`}
+                  >
+                    {/* Icon */}
+                    {/* <User className="text-primary h-5 w-5" /> */}
+
+                    <Image
+                      alt=""
+                      src={"/svgs/UserIcon.svg"}
+                      width={20}
+                      height={20}
+                      className="text-primary h-5 w-5"
+                    />
+
+                    {/* Divider */}
+                    <div className="w-px h-8 bg-primary"></div>
+
+                    {/* Label + Input */}
+                    <div className="flex flex-col flex-1 justify-center">
+                      <Label
+                        htmlFor="username"
+                        className="text-sm text-muted-foreground px-2"
+                      >
+                        Username
+                      </Label>
+                      <Input
+                        id="username"
+                        {...register("username")}
+                        type="text"
+                        placeholder="johndoe"
+                        className="border-none bg-transparent focus-visible:ring-0 focus:outline-none px-2"
+                      />
+                    </div>
+                  </div>
+
+                  {errors.username && (
+                    <p className="text-sm text-destructive">
+                      {errors.username.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Email Field */}
@@ -150,7 +210,13 @@ export default function SignUpPage() {
                   }`}
                 >
                   {/* Icon */}
-                  <Mail className="text-primary h-5 w-5" />
+                  <Image
+                    alt=""
+                    src={"/svgs/EmailIcon.svg"}
+                    width={20}
+                    height={20}
+                    className="text-primary h-5 w-5"
+                  />
 
                   {/* Divider */}
                   <div className="w-px h-8 bg-primary"></div>
@@ -192,7 +258,14 @@ export default function SignUpPage() {
                     }`}
                   >
                     {/* Icon */}
-                    <Lock className="text-primary h-5 w-5" />
+                    {/* <Lock className="text-primary h-5 w-5" /> */}
+                    <Image
+                      alt=""
+                      src={"/svgs/PassIcon.svg"}
+                      width={20}
+                      height={20}
+                      className="text-primary h-5 w-5"
+                    />
 
                     {/* Divider */}
                     <div className="w-px h-8 bg-primary"></div>
@@ -245,7 +318,14 @@ export default function SignUpPage() {
                     }`}
                   >
                     {/* Icon */}
-                    <Lock className="text-primary h-5 w-5" />
+                    {/* <Lock className="text-primary h-5 w-5" /> */}
+                    <Image
+                      alt=""
+                      src={"/svgs/PassIcon.svg"}
+                      width={20}
+                      height={20}
+                      className="text-primary h-5 w-5"
+                    />
 
                     {/* Divider */}
                     <div className="w-px h-8 bg-primary"></div>
@@ -306,64 +386,67 @@ export default function SignUpPage() {
                   <div className="w-full border-t border-border"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-background text-muted-foreground">
+                  <span className="text-white bg-[#222C41] px-4">
                     Or continue with
                   </span>
                 </div>
               </div>
 
               {/* Social Login */}
-              <div className="flex space-x-4">
+              <div className="flex space-x-4 items-center justify-center">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleSocialLogin("Facebook")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
+                  className="bg-[#5E5F61] border-border hover:bg-accent h-12 w-12"
                 >
                   <Image
                     src="/svgs/Facebook-Icon.svg"
                     alt="Facebook"
-                    width={10}
-                    height={10}
+                    width={24}
+                    height={24}
                   />
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleSocialLogin("Google")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
+                  className="bg-[#5E5F61] border-border hover:bg-accent h-12 w-12"
                 >
                   <Image
                     src="/svgs/Google-Icon.svg"
                     alt="Google"
-                    width={20}
-                    height={20}
+                    width={24}
+                    height={24}
                   />
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleSocialLogin("Apple")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
+                  className="bg-[#5E5F61] border-border hover:bg-accent h-12 w-12"
                 >
                   <Image
                     src="/svgs/Apple-Icon.svg"
                     alt="Apple"
-                    width={20}
-                    height={20}
+                    width={24}
+                    height={24}
                   />
                 </Button>
+
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => handleSocialLogin("Spotify")}
-                  className="flex-1 bg-card border-border hover:bg-accent"
+                  className="bg-[#5E5F61] border-border hover:bg-accent h-12 w-12"
                 >
                   <Image
                     src="/svgs/Spotify-Icon.svg"
                     alt="Spotify"
-                    width={20}
-                    height={20}
+                    width={24}
+                    height={24}
                   />
                 </Button>
               </div>
