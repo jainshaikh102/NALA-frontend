@@ -1,9 +1,11 @@
+// app/(dashboard)/layout.tsx (DashboardLayout)
 "use client";
 import { ReactNode, useState } from "react";
 import Sidebar from "@/components/dashboard/Sidebar";
 import { RouteGuard } from "@/components/auth/route-guard";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
+import "../globals.css";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,18 +14,14 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleMenuClick = () => {
-    setSidebarOpen(true);
-  };
-
-  const handleSidebarClose = () => {
-    setSidebarOpen(false);
-  };
+  const handleMenuClick = () => setSidebarOpen(true);
+  const handleSidebarClose = () => setSidebarOpen(false);
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen bg-background p-4 rounded-4xl">
-        {/* Mobile Overlay - Only show when sidebar is open on mobile */}
+      {/* 👇 Hide scrollbars within the dashboard area */}
+      <div className="min-h-screen bg-background p-4 rounded-4xl scrollbar-hide">
+        {/* Mobile Overlay */}
         {sidebarOpen && (
           <div
             className="block lg:hidden fixed inset-0 bg-black/50 z-40"
@@ -34,22 +32,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Sidebar */}
         <div
-          className={`
-            fixed top-0 left-0 h-full w-24 lg:w-24 bg-background z-50 lg:z-auto
-            transform transition-transform duration-300 ease-in-out
-            ${
-              sidebarOpen
-                ? "translate-x-0"
-                : "-translate-x-full lg:translate-x-0"
-            }
-          `}
+          className={`fixed top-0 left-0 h-full w-24 lg:w-24 bg-background z-50 lg:z-auto transform transition-transform duration-300 ease-in-out ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
         >
           <Sidebar isOpen={sidebarOpen} onClose={handleSidebarClose} />
         </div>
 
         {/* Main Content */}
         <main className="lg:ml-24 min-h-screen relative">
-          {/* Mobile Menu Button - Hide when sidebar is open */}
+          {/* Mobile Menu Button */}
           <div
             className={`lg:hidden fixed top-4 left-4 z-50 transition-opacity duration-300 ${
               sidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"
@@ -65,7 +57,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </Button>
           </div>
 
-          {/* Content with proper spacing for mobile menu button */}
           <div className="pt-0 lg:pt-0">{children}</div>
         </main>
       </div>

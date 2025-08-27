@@ -1,3 +1,4 @@
+// app/layout.tsx (RootLayout)
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
@@ -19,11 +20,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="scrollbar-hide">
       <head>
         <script
           src="https://accounts.google.com/gsi/client"
@@ -32,7 +31,10 @@ export default function RootLayout({
         ></script>
         <script src="https://apis.google.com/js/api.js" async defer></script>
       </head>
-      <body className={`${dmSans.variable} font-sans antialiased`}>
+      {/* 👇 Hide browser scrollbar globally but keep scroll working */}
+      <body
+        className={`${dmSans.variable} font-sans antialiased scrollbar-hide`}
+      >
         <QueryProvider>
           <AuthProvider>
             {children}

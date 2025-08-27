@@ -9,6 +9,8 @@ import {
   PlaylistRecommendationDisplay,
   MultiSectionReportDisplay,
   MultiForecastDisplay,
+  PlatformDataDisplay,
+  CountryListenershipDisplay,
 } from "./DisplayDataType";
 
 // Interface for the main response renderer
@@ -67,6 +69,12 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({ data }) => {
     case "multi_forecast_display":
       return <MultiForecastDisplay data={display_data} />;
 
+    case "platform_data":
+      return <PlatformDataDisplay data={display_data} />;
+
+    case "country_listenership_data":
+      return <CountryListenershipDisplay data={display_data} />;
+
     default:
       // Fallback for unknown data types
       return (
@@ -103,6 +111,8 @@ export {
   PlaylistRecommendationDisplay,
   MultiSectionReportDisplay,
   MultiForecastDisplay,
+  PlatformDataDisplay,
+  CountryListenershipDisplay,
 };
 
 // Default export

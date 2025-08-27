@@ -1306,7 +1306,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-screen bg-[#222C41] flex flex-col lg:flex-row gap-4 p-4 sm:p-4 lg:p-4 overflow-hidden rounded-2xl border border-[#FFFFFF3B]">
+    <div className="h-screen bg-[#222C41] flex flex-col lg:flex-row gap-4 p-4 sm:p-4 lg:p-4 overflow-hidden scrollbar-hide rounded-2xl border border-[#FFFFFF3B]">
       {/* Invalid Chat ID Error */}
       {invalidChatId && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
@@ -2441,7 +2441,7 @@ const ChatPage = () => {
         {/* Chat Messages */}
         <div
           ref={desktopChatRef}
-          className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+          className="flex-1 overflow-y-auto p-4 space-y-4 relative scrollbar-thin scroll-smooth"
         >
           {/* Loading overlay for chat loading */}
           {(isLoadingChats || isLoadingSessions) && (
@@ -2472,7 +2472,7 @@ const ChatPage = () => {
                   </div>
                 </div>
               ) : (
-                <div className="w-full bg-secondary text-secondary-foreground rounded-lg p-4 max-w-full relative group">
+                <div className="w-full bg-background text-secondary-foreground rounded-lg p-4 max-w-full relative group">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <Image

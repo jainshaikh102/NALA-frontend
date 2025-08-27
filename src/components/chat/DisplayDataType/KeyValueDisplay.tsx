@@ -102,14 +102,13 @@ const KeyValueDisplay: React.FC<KeyValueDisplayProps> = ({
           const formattedValue = formatSmartValue(key, value);
 
           return (
-            <Card key={index}>
-              <CardContent className="p-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">
+            <Card key={index} className="bg-primary">
+              <CardContent className="flex items-center justify-between h-full">
+                <div className="text-start flex flex-col justify-between h-full gap-4">
+                  <p className="text-base text-white mt-1">{formattedLabel}</p>
+
+                  <p className="text-2xl font-bold text-white">
                     {formattedValue}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {formattedLabel}
                   </p>
                 </div>
               </CardContent>

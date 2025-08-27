@@ -13,7 +13,7 @@ export default function Home() {
 
   // Show a loading state while redirecting
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center scrollbar-hide scroll-smooth">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-foreground mb-2">Nala</h1>
         <p className="text-muted-foreground">Loading...</p>

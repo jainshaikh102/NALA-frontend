@@ -44,7 +44,7 @@ const createMalformedDataFallback = (data: unknown, context: string) => {
   );
 
   return (
-    <div className="p-4 bg-orange-50/50 border border-orange-200 rounded">
+    <div className="p-4 border rounded">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-orange-600" />
         <span className="text-sm font-medium text-orange-800">
@@ -59,7 +59,7 @@ const createMalformedDataFallback = (data: unknown, context: string) => {
         <summary className="cursor-pointer text-sm text-orange-600 hover:text-orange-800 flex items-center gap-1">
           View Raw Data
         </summary>
-        <pre className="mt-2 p-2 bg-orange-100 rounded text-xs overflow-auto max-h-40 text-orange-900">
+        <pre className="mt-2 p-2  rounded text-xs overflow-auto max-h-40 text-orange-900">
           {JSON.stringify(data, null, 2)}
         </pre>
       </details>
@@ -171,66 +171,62 @@ const DataFrameDisplay: React.FC<DataFrameDisplayProps> = ({ data }) => {
       </div> */}
 
       {/* Table Container with Horizontal Scroll */}
-      <div className="w-full overflow-x-auto scrollbar-hide">
-        <div className="w-full bg-background">
-          <div className="p-0 bg-background">
-            <div className="min-w-fit bg-background">
-              <Table className="w-full bg-background">
-                <TableHeader className="bg-muted/50">
-                  <TableRow className="border-b bg-muted/50">
-                    {tableData.columns.map((column, index) => (
-                      <TableHead
-                        key={index}
-                        className="text-left p-2 font-medium text-muted-foreground whitespace-nowrap min-w-[100px] max-w-[150px] bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
-                        style={{ width: index === 0 ? "120px" : "100px" }}
-                        // onClick={() => handleSort(index)}
-                      >
-                        <div
-                          className="flex items-center gap-2 truncate"
-                          title={column}
-                        >
-                          <span className="truncate">{column}</span>
-                          {/* {index} */}
-                          {/* {getSortIcon(index)} */}
-                        </div>
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="bg-background">
-                  {processedData.map((row, rowIndex) => (
-                    <TableRow
-                      key={rowIndex}
-                      className="border-b bg-background hover:bg-muted/30 transition-colors"
+      <div className="w-full overflow-x-auto border border-border scrollbar-thin">
+        <div className="min-w-fit">
+          <Table className="w-full">
+            <TableHeader className="bg-[#222C41] ">
+              <TableRow className="border-b">
+                {tableData.columns.map((column, index) => (
+                  <TableHead
+                    key={index}
+                    className="text-left p-2 font-medium text-primary whitespace-nowrap min-w-[100px] max-w-[150px] bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
+                    style={{ width: index === 0 ? "120px" : "100px" }}
+                    // onClick={() => handleSort(index)}
+                  >
+                    <div
+                      className="flex items-center gap-2 truncate"
+                      title={column}
                     >
-                      {row.map((cell, cellIndex) => {
-                        const columnName = tableData.columns[cellIndex] || "";
-                        return (
-                          <TableCell
-                            key={cellIndex}
-                            className="p-2 whitespace-nowrap min-w-[100px] max-w-[150px] bg-background"
-                            style={{
-                              width: cellIndex === 0 ? "120px" : "100px",
-                            }}
-                          >
-                            <div className="truncate" title={String(cell)}>
-                              {cellIndex === 0 ? (
-                                <span className="font-medium">{cell}</span>
-                              ) : (
-                                <span className="text-muted-foreground">
-                                  {formatSmartValue(columnName, cell)}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+                      <span className="truncate">{column}</span>
+                      {/* {index} */}
+                      {/* {getSortIcon(index)} */}
+                    </div>
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody className="">
+              {processedData.map((row, rowIndex) => (
+                <TableRow
+                  key={rowIndex}
+                  className="border-b bg-[#FFFFFF4D] hover:bg-[#FFFFFF4D]/30 transition-colors"
+                >
+                  {row.map((cell, cellIndex) => {
+                    const columnName = tableData.columns[cellIndex] || "";
+                    return (
+                      <TableCell
+                        key={cellIndex}
+                        className="p-2 whitespace-nowrap min-w-[100px] max-w-[150px]"
+                        style={{
+                          width: cellIndex === 0 ? "120px" : "100px",
+                        }}
+                      >
+                        <div className="truncate" title={String(cell)}>
+                          {cellIndex === 0 ? (
+                            <span className="font-medium">{cell}</span>
+                          ) : (
+                            <span className="text-white">
+                              {formatSmartValue(columnName, cell)}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
