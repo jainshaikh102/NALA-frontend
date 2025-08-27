@@ -11,7 +11,6 @@ import {
   PlaylistRecommendationDisplay,
   MultiForecastDisplay,
   MultiSectionReportDisplay,
-  MixedContentDisplay,
   PlatformDataDisplay,
   CountryListenershipDisplay,
 } from "./DataDisplayComponents";
@@ -501,11 +500,14 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
 
       case "mixed_content":
         return (
-          <MixedContentDisplay
-            textContent={answerStr}
-            structuredData={displayData}
-            dataType={dataType}
-          />
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <div className="text-muted-foreground">
+                Mixed content display not implemented
+              </div>
+            ) : null}
+          </div>
         );
 
       default:
