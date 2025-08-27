@@ -77,6 +77,8 @@ import { useImageGeneration, useVideoGeneration } from "@/hooks/use-generation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { useRAGSources, useNotes } from "@/hooks/use-sources-notes";
+import { useGoogleDriveUpload } from "@/hooks/use-google-drive-upload";
+import { useGoogleDrive } from "@/hooks/use-google-drive";
 interface ChatMessage {
   id: number;
   type: "user" | "bot";
@@ -193,6 +195,18 @@ const ChatPage = () => {
   const [linkInput, setLinkInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
   const { user } = useAuthStore();
+
+  // Shared Google Drive hook instance
+  const googleDriveHook = useGoogleDrive();
+
+  // Google Drive upload hook with shared instance
+  const {
+    uploadMultipleGoogleDriveFiles,
+    uploadProgress,
+    clearProgress,
+    isUploading: isUploadingGoogleDriveFiles,
+  } = useGoogleDriveUpload(googleDriveHook);
+
   // Chat session management hooks
   const {
     chatSessions,
@@ -855,10 +869,39 @@ const ChatPage = () => {
   };
 
   // Handle Google Drive connection
-  const handleGoogleDriveConnect = (files: any[]) => {
-    console.log("Google Drive files connected:", files);
-    // Here you can add the files to your sources
-    // For now, we'll just show a success message
+  const handleGoogleDriveConnect = async (files: any[]) => {
+    if (!files || files.length === 0) {
+      toast.error("No files selected");
+      return;
+    }
+
+    if (!chatId) {
+      toast.error("No active chat session");
+      return;
+    }
+
+    try {
+      toast.info(
+        `Starting upload of ${files.length} file(s) from Google Drive...`
+      );
+
+      // Clear any previous progress
+      clearProgress();
+
+      // Upload files to GCS and then to RAG
+      await uploadMultipleGoogleDriveFiles.mutateAsync({
+        files,
+        chatSessionId: chatId,
+      });
+
+      // Refresh sources list after successful upload
+      // Note: The sources will be automatically updated through React Query
+    } catch (error) {
+      console.error("Google Drive upload failed:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Upload failed: ${errorMessage}`);
+    }
   };
 
   // Chat session management functions
@@ -3184,6 +3227,9 @@ const ChatPage = () => {
         isOpen={isGoogleDriveDialogOpen}
         onClose={() => setIsGoogleDriveDialogOpen(false)}
         onConnect={handleGoogleDriveConnect}
+        isUploading={isUploadingGoogleDriveFiles}
+        uploadProgress={uploadProgress}
+        googleDriveHook={googleDriveHook}
       />
 
       {/* Live Chat Dialog */}
