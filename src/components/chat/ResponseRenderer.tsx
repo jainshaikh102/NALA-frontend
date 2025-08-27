@@ -12,6 +12,8 @@ import {
   MultiForecastDisplay,
   MultiSectionReportDisplay,
   MixedContentDisplay,
+  PlatformDataDisplay,
+  CountryListenershipDisplay,
 } from "./DataDisplayComponents";
 
 interface ResponseRendererProps {
@@ -61,6 +63,33 @@ const isMultiSectionReportArray = (displayData: unknown): boolean => {
   );
 };
 
+// Helper function to detect if displayData is platform data array
+const isPlatformDataArray = (displayData: unknown): boolean => {
+  return (
+    Array.isArray(displayData) &&
+    displayData.length > 0 &&
+    displayData.every(
+      (item) =>
+        item && typeof item === "object" && "name" in item && "icon_url" in item
+    )
+  );
+};
+
+// Helper function to detect if displayData is country listenership data array
+const isCountryListenershipDataArray = (displayData: unknown): boolean => {
+  return (
+    Array.isArray(displayData) &&
+    displayData.length > 0 &&
+    displayData.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        "countryCode" in item &&
+        "percentage" in item
+    )
+  );
+};
+
 export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
   answerStr,
   displayData,
@@ -82,6 +111,23 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           return <PlaylistRecommendationDisplay data={data as any} />;
         case "multi_forecast_display":
           return <MultiForecastDisplay data={data as any} />;
+        case "platform_data":
+          // Handle both direct array format and nested content format
+          const platformData = (data as any)?.data || data;
+          const platformTitle = (data as any)?.title || title;
+          return (
+            <PlatformDataDisplay data={platformData} title={platformTitle} />
+          );
+        case "country_listenership_data":
+          // Handle both direct array format and nested content format
+          const countryData = (data as any)?.data || data;
+          const countryTitle = (data as any)?.title || title;
+          return (
+            <CountryListenershipDisplay
+              data={countryData}
+              title={countryTitle}
+            />
+          );
         case "text":
           return <TextDisplay content={data as string} />;
         case "error":
@@ -166,6 +212,26 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           {displayData.sections.map((section, index) =>
             renderDataSection(section.type, section.data, section.title)
           )}
+        </div>
+      );
+    }
+
+    // Check if displayData is platform data array (prioritize this over generic array detection)
+    if (isPlatformDataArray(displayData)) {
+      return (
+        <div className="space-y-4">
+          {answerStr ? <TextDisplay content={answerStr} /> : null}
+          <PlatformDataDisplay data={displayData as any} />
+        </div>
+      );
+    }
+
+    // Check if displayData is country listenership data array (prioritize this over generic array detection)
+    if (isCountryListenershipDataArray(displayData)) {
+      return (
+        <div className="space-y-4">
+          {answerStr ? <TextDisplay content={answerStr} /> : null}
+          <CountryListenershipDisplay data={displayData as any} />
         </div>
       );
     }
@@ -409,6 +475,26 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
                     : (displayData as any)
                 }
               />
+            ) : null}
+          </div>
+        );
+
+      case "platform_data":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <PlatformDataDisplay data={displayData as any} />
+            ) : null}
+          </div>
+        );
+
+      case "country_listenership_data":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <CountryListenershipDisplay data={displayData as any} />
             ) : null}
           </div>
         );

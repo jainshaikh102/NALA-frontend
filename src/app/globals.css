@@ -23,20 +23,24 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* Internet Explorer 10+ */
+    scroll-behavior: smooth;
   }
 
   .scrollbar-hide::-webkit-scrollbar {
     display: none; /* WebKit */
+    scroll-behavior: smooth;
   }
 
   /* Custom Scrollbar Styling for Tables */
   .scrollbar-thin {
     scrollbar-width: thin; /* Firefox */
+    scroll-behavior: smooth;
   }
 
   .scrollbar-thin::-webkit-scrollbar {
     height: 6px; /* Horizontal scrollbar height */
     width: 6px; /* Vertical scrollbar width */
+    scroll-behavior: smooth;
   }
 
   .scrollbar-thumb-gray-300::-webkit-scrollbar-thumb {

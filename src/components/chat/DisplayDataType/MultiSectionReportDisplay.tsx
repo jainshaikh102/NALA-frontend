@@ -10,6 +10,8 @@ import PlaylistRecommendationDisplay from "./PlaylistRecommendationDisplay";
 import MultiForecastDisplay from "./MultiForecastDisplay";
 import TextDisplay from "./TextDisplay";
 import ErrorDisplay from "./ErrorDisplay";
+import PlatformDataDisplay from "./PlatformDataDisplay";
+import CountryListenershipDisplay from "./CountryListenershipDisplay";
 
 // Type definitions for different section content types
 interface KeyValueContent {
@@ -39,7 +41,19 @@ interface LegacyDataFrameContent {
 }
 
 interface PlatformContent {
-  data?: string[];
+  title?: string;
+  data?: Array<{
+    name: string;
+    icon_url: string | null;
+  }>;
+}
+
+interface CountryListenershipContent {
+  title?: string;
+  data?: Array<{
+    countryCode: string;
+    percentage: number;
+  }>;
 }
 
 interface SectionContentWithTitle {
@@ -212,22 +226,32 @@ const MultiSectionReportDisplay: React.FC<MultiSectionReportDisplayProps> = ({
         return <ErrorDisplay key={index} content={section.content as string} />;
 
       case "platform_data":
-        // Handle platform data - extract from content.data and display as bullet points
+        // Handle platform data using PlatformDataDisplay component
         const platformContent = section.content as PlatformContent;
-        const platformData = platformContent?.data || platformContent;
+        const platformData = platformContent?.data || [];
+        const platformTitle = platformContent?.title;
 
-        if (Array.isArray(platformData)) {
-          const bulletList = platformData
-            .map((platform: string) => `• ${platform}`)
-            .join("\n");
-          return <TextDisplay key={index} content={bulletList} />;
-        } else {
-          return (
-            <div className="text-muted-foreground">
-              No platform data available
-            </div>
-          );
-        }
+        return (
+          <PlatformDataDisplay
+            key={index}
+            data={platformData}
+            title={platformTitle}
+          />
+        );
+
+      case "country_listenership_data":
+        // Handle country listenership data using CountryListenershipDisplay component
+        const countryContent = section.content as CountryListenershipContent;
+        const countryData = countryContent?.data || [];
+        const countryTitle = countryContent?.title;
+
+        return (
+          <CountryListenershipDisplay
+            key={index}
+            data={countryData}
+            title={countryTitle}
+          />
+        );
 
       default:
         // Enhanced fallback - try to auto-detect the data type based on content structure

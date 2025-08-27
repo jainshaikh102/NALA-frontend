@@ -233,31 +233,37 @@ const TextDisplay: React.FC<TextDisplayProps> = ({ content }) => {
             result.push(
               <div
                 key={`table-${i}`}
-                className="my-4 overflow-x-auto scrollbar-hide"
+                className="my-4 overflow-x-auto scrollbar-thin"
               >
-                <Table className="w-full bg-background border border-border">
-                  <TableHeader className="bg-muted/50">
-                    <TableRow className="border-b bg-muted/50">
+                <Table className="w-full">
+                  <TableHeader className="bg-[#222C41] ">
+                    <TableRow className="border-b">
                       {tableData.headers.map((header, headerIndex) => (
                         <TableHead
                           key={headerIndex}
-                          className="text-left p-3 font-medium text-muted-foreground whitespace-nowrap bg-muted/50"
+                          className="text-left p-2 font-medium text-primary whitespace-nowrap min-w-[100px] max-w-[150px] bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors"
+                          style={{
+                            width: headerIndex === 0 ? "120px" : "100px",
+                          }}
                         >
                           {formatTextWithNumbers(header)}
                         </TableHead>
                       ))}
                     </TableRow>
                   </TableHeader>
-                  <TableBody className="bg-background">
+                  <TableBody>
                     {tableData.rows.map((row, rowIndex) => (
                       <TableRow
                         key={rowIndex}
-                        className="border-b bg-background hover:bg-muted/30 transition-colors"
+                        className="border-b bg-[#FFFFFF4D] hover:bg-[#FFFFFF4D]/30 transition-colors"
                       >
                         {row.map((cell, cellIndex) => (
                           <TableCell
                             key={cellIndex}
-                            className="p-3 whitespace-nowrap bg-background"
+                            className="p-2 whitespace-nowrap min-w-[100px] max-w-[150px]"
+                            style={{
+                              width: cellIndex === 0 ? "120px" : "100px",
+                            }}
                           >
                             <span className="text-white">{cell}</span>
                           </TableCell>

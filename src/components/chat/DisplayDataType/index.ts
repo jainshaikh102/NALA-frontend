@@ -8,6 +8,8 @@ export { default as ViralityReportDisplay } from "./ViralityReportDisplay";
 export { default as PlaylistRecommendationDisplay } from "./PlaylistRecommendationDisplay";
 export { default as MultiSectionReportDisplay } from "./MultiSectionReportDisplay";
 export { default as MultiForecastDisplay } from "./MultiForecastDisplay";
+export { default as PlatformDataDisplay } from "./PlatformDataDisplay";
+export { default as CountryListenershipDisplay } from "./CountryListenershipDisplay";
 
 // Type definitions for props
 export interface BaseDisplayProps {
@@ -121,4 +123,20 @@ export interface MultiForecastDisplayProps extends BaseDisplayProps {
       };
     }>;
   };
+}
+
+export interface PlatformDataDisplayProps extends BaseDisplayProps {
+  data: Array<{
+    name: string;
+    icon_url: string | null;
+  }>;
+  title?: string;
+}
+
+export interface CountryListenershipDisplayProps extends BaseDisplayProps {
+  data: Array<{
+    countryCode: string;
+    percentage: number;
+  }>;
+  title?: string;
 }
