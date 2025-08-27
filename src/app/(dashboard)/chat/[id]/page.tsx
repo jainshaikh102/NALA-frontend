@@ -79,6 +79,7 @@ import { Badge } from "@/components/ui/badge";
 import { useRAGSources, useNotes } from "@/hooks/use-sources-notes";
 import { useGoogleDriveUpload } from "@/hooks/use-google-drive-upload";
 import { useGoogleDrive } from "@/hooks/use-google-drive";
+import { useSpeechToText } from "@/hooks/use-speech-to-text";
 interface ChatMessage {
   id: number;
   type: "user" | "bot";
@@ -206,6 +207,43 @@ const ChatPage = () => {
     clearProgress,
     isUploading: isUploadingGoogleDriveFiles,
   } = useGoogleDriveUpload(googleDriveHook);
+
+  // Speech-to-text hook
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    error: speechError,
+    isSupported: isSpeechSupported,
+    toggleListening,
+    clearTranscript,
+  } = useSpeechToText({
+    language: "en-US",
+    continuous: true,
+    interimResults: true,
+  });
+
+  // Update input text when speech transcript changes
+  useEffect(() => {
+    if (transcript) {
+      setInputText((prev) => {
+        // If there's existing text, add a space before the new transcript
+        const newText = prev ? `${prev} ${transcript}` : transcript;
+        return newText;
+      });
+      // Clear the transcript after adding it to input
+      clearTranscript();
+    }
+  }, [transcript, clearTranscript]);
+
+  // Handle microphone click
+  const handleMicClick = () => {
+    if (!isSpeechSupported) {
+      toast.error("Speech recognition is not supported in this browser");
+      return;
+    }
+    toggleListening();
+  };
 
   // Chat session management hooks
   const {
@@ -2351,28 +2389,57 @@ const ChatPage = () => {
                       )}
                     </div>
 
-                    <input
-                      type="text"
-                      placeholder="Ask or search anything..."
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      disabled={
-                        isSendingMessage ||
-                        isGeneratingImage ||
-                        isGeneratingVideo
-                      }
-                      className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-                    />
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        placeholder={
+                          isListening
+                            ? "Listening... Speak now!"
+                            : "Ask or search anything..."
+                        }
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        disabled={
+                          isSendingMessage ||
+                          isGeneratingImage ||
+                          isGeneratingVideo
+                        }
+                        className="w-full bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                      />
+                      {/* Interim transcript indicator */}
+                      {interimTranscript && (
+                        <div className="absolute bottom-0 left-0 text-xs text-gray-400 italic bg-gray-800 px-2 py-1 rounded">
+                          {interimTranscript}...
+                        </div>
+                      )}
+                    </div>
 
                     {/* Right side buttons */}
                     <div className="flex items-center space-x-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className={`h-8 w-8 ${
+                          isListening
+                            ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                            : "hover:bg-gray-700"
+                        }`}
                         type="button"
+                        onClick={handleMicClick}
+                        disabled={!isSpeechSupported}
+                        title={
+                          !isSpeechSupported
+                            ? "Speech recognition not supported"
+                            : isListening
+                            ? "Stop listening"
+                            : "Start voice input"
+                        }
                       >
-                        <Mic className="h-4 w-4" />
+                        <Mic
+                          className={`h-4 w-4 ${
+                            isListening ? "animate-pulse" : ""
+                          }`}
+                        />
                       </Button>
 
                       {/* Conditional button - Live Chat or Send */}
@@ -2573,16 +2640,28 @@ const ChatPage = () => {
             <form onSubmit={handleSubmit}>
               <div className="flex w-full items-center flex-col space-x-2 border-[1px] border-[#FFFFFF4D] rounded-xl p-3">
                 {/* Left side buttons */}
-                <input
-                  type="text"
-                  placeholder="Ask or search anything..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  disabled={
-                    isSendingMessage || isGeneratingImage || isGeneratingVideo
-                  }
-                  className="flex-1 bg-transparent w-full p-2 border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
-                />
+                <div className="flex-1 w-full relative">
+                  <input
+                    type="text"
+                    placeholder={
+                      isListening
+                        ? "Listening... Speak now!"
+                        : "Ask or search anything..."
+                    }
+                    value={inputText}
+                    onChange={(e) => setInputText(e.target.value)}
+                    disabled={
+                      isSendingMessage || isGeneratingImage || isGeneratingVideo
+                    }
+                    className="w-full bg-transparent p-2 border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
+                  />
+                  {/* Interim transcript indicator */}
+                  {interimTranscript && (
+                    <div className="absolute bottom-0 left-2 text-xs text-gray-400 italic bg-gray-800 px-2 py-1 rounded">
+                      {interimTranscript}...
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center justify-between w-full space-x-2">
                   <div className="flex items-center space-x-1">
                     <Button
@@ -2684,10 +2763,27 @@ const ChatPage = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className={`h-8 w-8 ${
+                        isListening
+                          ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                          : "hover:bg-gray-700"
+                      }`}
                       type="button"
+                      onClick={handleMicClick}
+                      disabled={!isSpeechSupported}
+                      title={
+                        !isSpeechSupported
+                          ? "Speech recognition not supported"
+                          : isListening
+                          ? "Stop listening"
+                          : "Start voice input"
+                      }
                     >
-                      <Mic className="h-4 w-4" />
+                      <Mic
+                        className={`h-4 w-4 ${
+                          isListening ? "animate-pulse" : ""
+                        }`}
+                      />
                     </Button>
 
                     {/* Conditional button - Live Chat or Send */}
@@ -3273,9 +3369,24 @@ const ChatPage = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-16 w-16 rounded-full bg-[#E53E3E] hover:bg-[#C53030] text-white"
+                className={`h-16 w-16 rounded-full text-white ${
+                  isListening
+                    ? "bg-red-600 hover:bg-red-700 animate-pulse"
+                    : "bg-[#E53E3E] hover:bg-[#C53030]"
+                }`}
+                onClick={handleMicClick}
+                disabled={!isSpeechSupported}
+                title={
+                  !isSpeechSupported
+                    ? "Speech recognition not supported"
+                    : isListening
+                    ? "Stop listening"
+                    : "Start voice input"
+                }
               >
-                <Mic className="h-8 w-8" />
+                <Mic
+                  className={`h-8 w-8 ${isListening ? "animate-pulse" : ""}`}
+                />
               </Button>
               <Button
                 variant="ghost"
