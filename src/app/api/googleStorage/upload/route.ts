@@ -1,27 +1,37 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { Storage } from '@google-cloud/storage';
+import { NextRequest, NextResponse } from "next/server";
+import { Storage } from "@google-cloud/storage";
+const rawCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+let credentials;
 
-// Initialize GCS client
+if (rawCreds) {
+  credentials = JSON.parse(rawCreds);
+  if (credentials.private_key) {
+    credentials.private_key = credentials.private_key.replace(/\\n/g, "\n");
+  }
+}
+
 const storage = new Storage({
-  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
   projectId: process.env.GCP_PROJECT_ID,
+  credentials,
 });
+
+console.log(storage);
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const username = formData.get('username') as string;
-    const chatSessionId = formData.get('chat_session_id') as string;
+    const file = formData.get("file") as File;
+    const username = formData.get("username") as string;
+    const chatSessionId = formData.get("chat_session_id") as string;
 
     if (!file || !username || !chatSessionId) {
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
+        { success: false, message: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const bucketName = 'nala-rag';
+    const bucketName = "nala-rag";
     const destinationPath = `${username}/${Date.now()}_${file.name}`;
 
     const bucket = storage.bucket(bucketName);
@@ -33,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to GCS
     await blob.save(buffer, {
-      contentType: file.type || 'application/octet-stream',
+      contentType: file.type || "application/octet-stream",
       resumable: true,
     });
 
@@ -45,7 +55,7 @@ export async function POST(request: NextRequest) {
       fileName: file.name,
     });
   } catch (error) {
-    console.error('GCS upload error:', error);
+    console.error("GCS upload error:", error);
     return NextResponse.json(
       { success: false, message: `Upload failed: ${error.message}` },
       { status: 500 }

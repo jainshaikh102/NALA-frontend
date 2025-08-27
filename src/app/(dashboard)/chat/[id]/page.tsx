@@ -6,7 +6,6 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ResponseRenderer } from "@/components/chat/ResponseRenderer";
-
 import {
   Plus,
   MoreHorizontal,
@@ -77,7 +76,7 @@ import {
 import { useImageGeneration, useVideoGeneration } from "@/hooks/use-generation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-
+import { useRAGSources, useNotes } from "@/hooks/use-sources-notes";
 interface ChatMessage {
   id: number;
   type: "user" | "bot";
@@ -139,6 +138,8 @@ const ChatPage = () => {
   const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
   const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
   const [isAddSourceDialogOpen, setIsAddSourceDialogOpen] = useState(false);
+  const [isMobileAddSourceDialogOpen, setIsMobileAddSourceDialogOpen] =
+    useState(false);
   const [isGoogleDriveDialogOpen, setIsGoogleDriveDialogOpen] = useState(false);
   const [isLiveChatDialogOpen, setIsLiveChatDialogOpen] = useState(false);
   const [selectedGenerateItem, setSelectedGenerateItem] = useState<
@@ -185,9 +186,13 @@ const ChatPage = () => {
   // FAQ visibility state - track complete message cycles
   const [hasCompletedMessageCycle, setHasCompletedMessageCycle] =
     useState(false);
-
+  // Add Sources modal states
+  const [isFileUploadDialogOpen, setIsFileUploadDialogOpen] = useState(false);
+  const [isLinkInputDialogOpen, setIsLinkInputDialogOpen] = useState(false);
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
+  const [linkInput, setLinkInput] = useState("");
+  const [noteInput, setNoteInput] = useState("");
   const { user } = useAuthStore();
-
   // Chat session management hooks
   const {
     chatSessions,
@@ -216,6 +221,83 @@ const ChatPage = () => {
   // User roster hook for adding artists to chat
   const { userRoster, isLoadingRoster } = useUserRoster(user?.username);
 
+  // Sources and notes management hooks
+  const {
+    sources,
+    isLoadingSources,
+    uploadSource,
+    deleteSource,
+    isUploadingSource,
+    isDeletingSource,
+  } = useRAGSources(currentSessionId || undefined);
+
+  const {
+    notes,
+    isLoadingNotes,
+    addNote,
+    removeNote,
+    isAddingNote,
+    isRemovingNote,
+  } = useNotes(currentSessionId || undefined);
+  // File type icon helper
+
+  const getFileTypeIcon = (fileName: string): string => {
+    const extension = fileName.toLowerCase().split(".").pop();
+
+    switch (extension) {
+      case "pdf":
+        return "📄";
+      case "txt":
+        return "📄";
+      case "md":
+        return "📝";
+      case "mp3":
+        return "🎵";
+      case "mp4":
+        return "🎵";
+      default:
+        return "📄";
+    }
+  };
+  const getCombinedSourcesAndNotes = () => {
+    const combinedItems: Array<{
+      id: string;
+      type: "source" | "note";
+      name: string;
+      icon: string;
+      data: any;
+    }> = [];
+
+    // Add sources (assuming sources is an object with documents array)
+    if (sources && typeof sources === "object" && "documents" in sources) {
+      const sourcesData = sources as any;
+      if (sourcesData.documents && Array.isArray(sourcesData.documents)) {
+        sourcesData.documents.forEach((source: any, index: number) => {
+          combinedItems.push({
+            id: `source-${source?.document_id || index}`,
+            type: "source",
+            name: source?.file_name || "Unknown file",
+            icon: getFileTypeIcon(source?.file_name || ""),
+            data: source,
+          });
+        });
+      }
+    }
+
+    // Add notes
+    if (notes && Array.isArray(notes)) {
+      notes.forEach((note: string, index: number) => {
+        combinedItems.push({
+          id: `note-${index}`,
+          type: "note",
+          name: note.length > 50 ? `${note.substring(0, 50)}...` : note,
+          icon: "📝",
+          data: note,
+        });
+      });
+    }
+    return combinedItems;
+  };
   // Generation hooks with callbacks to create bot messages
   const {
     generateImage,
@@ -300,27 +382,27 @@ const ChatPage = () => {
     },
   });
 
-  // Mock data for sources
-  const sources = [
-    {
-      id: 1,
-      name: "Explore management...",
-      type: "folder",
-      icon: "/svgs/GoogleDrive-WhiteIcon.svg",
-    },
-    {
-      id: 2,
-      name: "Domain: blacklionapp.com",
-      type: "website",
-      icon: "/svgs/Chain-WhiteIcon.svg",
-    },
-    {
-      id: 3,
-      name: "Dropbox folder",
-      type: "folder",
-      icon: "/svgs/DropBox-WhiteIcon.svg",
-    },
-  ];
+  // // Mock data for sources
+  // const sources = [
+  //   {
+  //     id: 1,
+  //     name: "Explore management...",
+  //     type: "folder",
+  //     icon: "/svgs/GoogleDrive-WhiteIcon.svg",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Domain: blacklionapp.com",
+  //     type: "website",
+  //     icon: "/svgs/Chain-WhiteIcon.svg",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Dropbox folder",
+  //     type: "folder",
+  //     icon: "/svgs/DropBox-WhiteIcon.svg",
+  //   },
+  // ];
 
   // FAQ questions
   const preQuestions = [
@@ -875,13 +957,153 @@ const ChatPage = () => {
     setConfirmRemoveRosterDialog({ isOpen: false, artistName: "" });
   };
 
+  // Add Sources handler functions - Mobile
+  const handleMobileFileUploadOption = () => {
+    setIsMobileAddSourceDialogOpen(false);
+    setIsFileUploadDialogOpen(true);
+  };
+
+  const handleMobileLinkInputOption = () => {
+    setIsMobileAddSourceDialogOpen(false);
+    setIsLinkInputDialogOpen(true);
+    setLinkInput("");
+  };
+
+  const handleMobileNotesOption = () => {
+    setIsMobileAddSourceDialogOpen(false);
+    setIsNotesDialogOpen(true);
+    setNoteInput("");
+  };
+
+  // File upload handler
+  const handleFileUpload = async (file: File) => {
+    if (!user?.username || !currentSessionId) {
+      toast.error("Please log in and select a chat session");
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      "application/pdf",
+      "text/plain",
+      "text/markdown",
+      "audio/mpeg",
+      "audio/wav",
+      "video/mp4",
+      "video/avi",
+      "video/quicktime",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(`Unsupported file type: ${file.type}`);
+      return;
+    }
+
+    // Validate file size (100MB)
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error(
+        `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Max: 100MB`
+      );
+      return;
+    }
+
+    try {
+      toast.success(`Uploading ${file.name}...`);
+      // Create FormData to send file to API route
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("username", user.username);
+      formData.append("chat_session_id", currentSessionId);
+      // Send file to API route for GCS upload
+      const response = await fetch("/api/googleStorage/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+      const { success, gcsUrl, fileName } = await response.json();
+      if (!success) {
+        throw new Error("Upload failed");
+      }
+
+      // Upload to RAG system
+      uploadSource({
+        gcs_url: gcsUrl,
+        file_name: file.name,
+        username: user.username,
+        chat_session_id: currentSessionId,
+      });
+      setIsFileUploadDialogOpen(false);
+    } catch (error) {
+      console.error("File upload failed:", error);
+      toast.error("Failed to upload file");
+    }
+  };
+
+  const handleLinkSubmit = () => {
+    if (!linkInput.trim()) {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+    // Basic URL validation
+    try {
+      new URL(linkInput);
+    } catch {
+      toast.error("Please enter a valid URL");
+      return;
+    }
+    if (!user?.username || !currentSessionId) {
+      toast.error("Please log in and select a chat session");
+      return;
+    }
+    // Extract filename from URL or use a default
+    const fileName = linkInput.split("/").pop() || "website-link";
+    toast.success(`Adding link: ${linkInput}`);
+    uploadSource({
+      gcs_url: linkInput,
+      file_name: fileName,
+      username: user.username,
+      chat_session_id: currentSessionId,
+    });
+    setIsLinkInputDialogOpen(false);
+    setLinkInput("");
+  };
+
+  const handleNoteSubmit = () => {
+    if (!noteInput.trim()) {
+      toast.error("Please enter some text");
+      return;
+    }
+
+    if (!currentSessionId) {
+      toast.error("Please select a chat session");
+      return;
+    }
+
+    toast.success(
+      `Adding note: ${noteInput.substring(0, 50)}${
+        noteInput.length > 50 ? "..." : ""
+      }`
+    );
+
+    addNote({
+      chat_session_id: currentSessionId,
+      note_item: noteInput,
+    });
+    setIsNotesDialogOpen(false);
+    setNoteInput("");
+  };
+
   // Generation handler functions
   const handleImageGeneration = async (prompt: string) => {
     if (!user?.username) {
       toast.error("Please log in to generate images");
       return;
     }
-
     // Add NALA thinking indicator for image generation
     const thinkingMessage = {
       id: Date.now() + 0.5,
@@ -895,15 +1117,11 @@ const ChatPage = () => {
     };
     setMessages((prev) => [...prev, thinkingMessage]);
     scrollToBottom();
-
     generateImage({
       prompt,
       chat_session_id: currentSessionId || undefined,
       username: user.username,
     });
-
-    // Mark complete cycle when image generation is triggered
-    // (the actual completion will be handled by the generation hook)
     setTimeout(() => {
       setHasCompletedMessageCycle(true);
     }, 1000); // Small delay to ensure generation starts
@@ -928,16 +1146,12 @@ const ChatPage = () => {
     };
     setMessages((prev) => [...prev, thinkingMessage]);
     scrollToBottom();
-
     generateVideo({
       prompt,
       duration_seconds: 8,
       chat_session_id: currentSessionId || undefined,
       username: user.username,
     });
-
-    // Mark complete cycle when video generation is triggered
-    // (the actual completion will be handled by the generation hook)
     setTimeout(() => {
       setHasCompletedMessageCycle(true);
     }, 1000); // Small delay to ensure generation starts
@@ -1158,7 +1372,10 @@ const ChatPage = () => {
                               DRAG AND DROP
                             </h3>
                             <p className="text-gray-400 mb-4">Or</p>
-                            <Button className="bg-[#6B7280] hover:bg-[#FFFFFF]/5 text-white px-8 py-2 rounded-full">
+                            <Button
+                              className="bg-[#6B7280] hover:bg-[#FFFFFF]/5 text-white px-8 py-2 rounded-full"
+                              onClick={() => setIsFileUploadDialogOpen(true)}
+                            >
                               Upload File
                             </Button>
                           </div>
@@ -1183,16 +1400,23 @@ const ChatPage = () => {
                         >
                           <div className="flex flex-col items-start space-y-10">
                             <h3 className="text-white font-bold text-xl">
-                              Google Drive
+                              Storage
                             </h3>
                             <div className="flex items-center space-x-4">
-                              <Image
-                                src="/svgs/GoogleDrive-WhiteIcon.svg"
-                                alt="Google Drive"
-                                width={60}
-                                height={52}
-                                className="opacity-50 hover:opacity-100"
-                              />
+                              <span
+                                onClick={() => {
+                                  setIsAddSourceDialogOpen(false);
+                                  setIsGoogleDriveDialogOpen(true);
+                                }}
+                              >
+                                <Image
+                                  src="/svgs/GoogleDrive-WhiteIcon.svg"
+                                  alt="Google Drive"
+                                  width={60}
+                                  height={52}
+                                  className="opacity-50 hover:opacity-100"
+                                />
+                              </span>
                               <Image
                                 src="/svgs/DropBox-WhiteIcon.svg"
                                 alt="Dropbox"
@@ -1213,7 +1437,10 @@ const ChatPage = () => {
 
                         {/* Link */}
                         <div className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
-                          <div className="flex flex-col items-start space-y-10">
+                          <div
+                            className="flex flex-col items-start space-y-10"
+                            onClick={() => setIsLinkInputDialogOpen(true)}
+                          >
                             <h3 className="text-white font-bold text-xl">
                               Link
                             </h3>
@@ -1231,7 +1458,10 @@ const ChatPage = () => {
 
                         {/* Copy & Paste */}
                         <div className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer">
-                          <div className="flex flex-col items-start space-y-10">
+                          <div
+                            className="flex flex-col items-start space-y-10"
+                            onClick={() => setIsNotesDialogOpen(true)}
+                          >
                             <h3 className="text-white font-bold text-xl">
                               Copy Paste
                             </h3>
@@ -1253,7 +1483,7 @@ const ChatPage = () => {
               </div>
 
               {/* Sources List */}
-              <div className="p-4 space-y-3 border-b border-border">
+              {/* <div className="p-4 space-y-3 border-b border-border">
                 {sources.map((source) => (
                   <div
                     key={source.id}
@@ -1278,24 +1508,76 @@ const ChatPage = () => {
                     </Button>
                   </div>
                 ))}
+              </div> */}
+              <div className="p-4 space-y-3 border-b border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Sources{" "}
+                    <span className="text-sm text-muted-foreground">
+                      ({getCombinedSourcesAndNotes().length})
+                    </span>
+                  </h2>
+                </div>
 
-                {/* <div className="flex items-center justify-center space-x-2 pt-2">
-                  {SocialMedia.map((social) => (
+                {isLoadingSources || isLoadingNotes ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading sources and notes...
+                    </span>
+                  </div>
+                ) : getCombinedSourcesAndNotes().length > 0 ? (
+                  getCombinedSourcesAndNotes().map((item) => (
                     <div
-                      key={social.id}
-                      className={`w-8 h-8 ${social.bgColor} rounded-full flex items-center justify-center`}
+                      key={item.id}
+                      className="flex items-center justify-between p-3 bg-secondary/50 hover:bg-secondary/80 transition-colors cursor-pointer rounded-full"
                     >
-                      <Image
-                        key={social.id}
-                        src={social.icon}
-                        alt={social.name}
-                        width={20}
-                        height={20}
-                        className=""
-                      />
+                      <div className="flex items-center space-x-3">
+                        <div className="w-6 h-6 bg-[#FFFFFF4D] rounded-full flex items-center justify-center">
+                          <span className="text-xs">{item.icon}</span>
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm text-foreground truncate">
+                            {item.name.slice(0, 10)}...
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.type === "source" ? "Source" : "Note"}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          if (item.type === "source") {
+                            deleteSource({
+                              document_id: item.data?.document_id,
+                            });
+                          } else {
+                            removeNote({
+                              chat_session_id: currentSessionId!,
+                              note_item: item.data,
+                            });
+                          }
+                        }}
+                        disabled={isDeletingSource || isRemovingNote}
+                      >
+                        {isDeletingSource || isRemovingNote ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )}
+                      </Button>
                     </div>
-                  ))}
-                </div> */}
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    {currentSessionId
+                      ? "No sources or notes added to this chat"
+                      : "Select a chat session to manage sources and notes"}
+                  </div>
+                )}
               </div>
 
               {/* Rosters Section */}
@@ -1574,8 +1856,8 @@ const ChatPage = () => {
               {/* Sources Section */}
               <div className="p-4 space-y-3">
                 <Dialog
-                  open={isAddSourceDialogOpen}
-                  onOpenChange={setIsAddSourceDialogOpen}
+                  open={isMobileAddSourceDialogOpen}
+                  onOpenChange={setIsMobileAddSourceDialogOpen}
                 >
                   <DialogTrigger asChild>
                     <Button className="w-full bg-[secondary] hover:bg-primary/90 text-primary-foreground border-solid border-[1px] border-[#ffffff]/50 rounded-full">
@@ -1594,64 +1876,150 @@ const ChatPage = () => {
 
                       {/* Source Options */}
                       <div className="px-8 pb-4">
-                        <div className="grid grid-cols-3 gap-6">
-                          {sources.map((source) => (
-                            <div
-                              key={source.id}
-                              className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
-                              onClick={() => {
-                                if (source.name === "Google Drive") {
-                                  setIsAddSourceDialogOpen(false);
-                                  setIsGoogleDriveDialogOpen(true);
-                                }
-                              }}
-                            >
-                              <Image
-                                src={source.icon}
-                                alt={source.name}
-                                width={48}
-                                height={48}
-                                className="mb-4"
-                              />
-                              <h3 className="text-white font-medium text-center">
-                                {source.name}
-                              </h3>
-                            </div>
-                          ))}
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* File Upload */}
+                          <div
+                            className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
+                            onClick={handleMobileFileUploadOption}
+                          >
+                            <Upload className="w-12 h-12 text-white mb-4" />
+                            <h3 className="text-white font-medium text-center mb-2">
+                              File Upload
+                            </h3>
+                            <p className="text-gray-400 text-xs text-center">
+                              Upload PDF, TXT, Audio, Video
+                            </p>
+                          </div>
+                          {/* Google Drive */}
+                          <div
+                            className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
+                            onClick={() => {
+                              setIsMobileAddSourceDialogOpen(false);
+                              setIsGoogleDriveDialogOpen(true);
+                            }}
+                          >
+                            <Image
+                              src="/svgs/GoogleDrive-WhiteIcon.svg"
+                              alt="Google Drive"
+                              width={48}
+                              height={48}
+                              className="mb-4"
+                            />
+                            <h3 className="text-white font-medium text-center mb-2">
+                              Google Drive
+                            </h3>
+                            <p className="text-gray-400 text-xs text-center">
+                              Select from your Drive
+                            </p>
+                          </div>
+                          {/* Link Input */}
+                          <div
+                            className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
+                            onClick={handleMobileLinkInputOption}
+                          >
+                            <Image
+                              src="/svgs/Chain-WhiteIcon.svg"
+                              alt="Link"
+                              width={48}
+                              height={48}
+                              className="mb-4"
+                            />
+                            <h3 className="text-white font-medium text-center mb-2">
+                              Link
+                            </h3>
+                            <p className="text-gray-400 text-xs text-center">
+                              Paste a website URL
+                            </p>
+                          </div>
+                          {/* Copy-Paste Text */}
+                          <div
+                            className="flex flex-col items-center p-6 bg-[#2A3441] rounded-xl hover:bg-[#3A4451] transition-colors cursor-pointer border border-[#ffffff]/10"
+                            onClick={handleMobileNotesOption}
+                          >
+                            <Paperclip className="w-12 h-12 text-white mb-4" />
+                            <h3 className="text-white font-medium text-center mb-2">
+                              Notes
+                            </h3>
+                            <p className="text-gray-400 text-xs text-center">
+                              Add text notes
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </DialogContent>
                 </Dialog>
+              </div>
 
-                {/* Sources List */}
-                <div className="space-y-2">
-                  {sources.map((source) => (
+              {/* Sources List */}
+              <div className="p-4 space-y-3 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Sources{" "}
+                    <span className="text-sm text-muted-foreground">
+                      ({getCombinedSourcesAndNotes().length})
+                    </span>
+                  </h2>
+                </div>
+                {isLoadingSources || isLoadingNotes ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">
+                      Loading sources and notes...
+                    </span>
+                  </div>
+                ) : getCombinedSourcesAndNotes().length > 0 ? (
+                  getCombinedSourcesAndNotes().map((item) => (
                     <div
-                      key={source.id}
-                      className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/50 transition-colors"
+                      key={item.id}
+                      className="flex items-center justify-between p-3 bg-secondary/50 hover:bg-secondary/80 transition-colors cursor-pointer rounded-full"
                     >
                       <div className="flex items-center space-x-3">
-                        <Image
-                          src={source.icon}
-                          alt={source.name}
-                          width={20}
-                          height={20}
-                        />
-                        <span className="text-sm font-medium text-foreground">
-                          {source.name}
-                        </span>
+                        <div className="w-6 h-6 bg-[#FFFFFF4D] rounded-full flex items-center justify-center">
+                          <span className="text-xs">{item.icon}</span>
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm text-foreground truncate">
+                            {item.name}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.type === "source" ? "Source" : "Note"}
+                          </span>
+                        </div>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                        className="h-6 w-6 text-red-500 hover:text-red-700"
+                        onClick={() => {
+                          if (item.type === "source") {
+                            deleteSource({
+                              document_id: item.data?.document_id,
+                            });
+                          } else {
+                            removeNote({
+                              chat_session_id: currentSessionId!,
+                              note_item: item.data,
+                            });
+                          }
+                        }}
+                        disabled={isDeletingSource || isRemovingNote}
                       >
-                        <MoreHorizontal className="h-4 w-4" />
+                        {isDeletingSource || isRemovingNote ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )}
                       </Button>
                     </div>
-                  ))}
-                </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    {currentSessionId
+                      ? "No sources or notes added to this chat"
+                      : "Select a chat session to manage sources and notes"}
+                  </div>
+                )}
               </div>
 
               {/* Rosters Section */}
@@ -1851,7 +2219,7 @@ const ChatPage = () => {
                         size="icon"
                         className="h-8 w-8"
                         type="button"
-                        onClick={() => setIsAddSourceDialogOpen(true)}
+                        onClick={() => setIsMobileAddSourceDialogOpen(true)}
                       >
                         <Paperclip className="h-4 w-4" />
                       </Button>
@@ -2624,6 +2992,192 @@ const ChatPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* File Upload Dialog */}
+
+      <Dialog
+        open={isFileUploadDialogOpen}
+        onOpenChange={setIsFileUploadDialogOpen}
+      >
+        <DialogContent className="w-full max-w-md bg-background border border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-foreground">
+              Upload File
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Upload PDF, TXT, Markdown, Audio, or Video files (Max: 100MB)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Drag & Drop Area */}
+            <div
+              className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors bg-muted/30"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const files = Array.from(e.dataTransfer.files);
+                if (files.length > 0) {
+                  handleFileUpload(files[0]);
+                }
+              }}
+            >
+              <div className="space-y-2">
+                <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                <p className="text-sm text-foreground">
+                  Drag & drop files here, or click to browse
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Supported: PDF, TXT, MD, MP3, WAV, MP4, AVI, MOV
+                </p>
+              </div>
+            </div>
+
+            {/* File Input */}
+            <input
+              type="file"
+              id="file-upload"
+              className="hidden"
+              accept=".pdf,.txt,.md,.mp3,.wav,.mp4,.avi,.mov"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  handleFileUpload(file);
+                }
+                e.target.value = "";
+              }}
+            />
+            <label
+              htmlFor="file-upload"
+              className="block w-full p-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-center cursor-pointer transition-colors"
+            >
+              Choose File
+            </label>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsFileUploadDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Input Dialog */}
+      <Dialog
+        open={isLinkInputDialogOpen}
+        onOpenChange={setIsLinkInputDialogOpen}
+      >
+        <DialogContent className="w-full max-w-md bg-background border border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-foreground">
+              Add Link
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Enter a website URL to add as a source
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-foreground">
+                Website URL
+              </label>
+              <input
+                type="url"
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                placeholder="https://example.com"
+                className="w-full p-3 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsLinkInputDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleLinkSubmit}
+              disabled={!linkInput.trim() || isUploadingSource}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {isUploadingSource ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Adding...
+                </>
+              ) : (
+                "Add Link"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notes Dialog */}
+      <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
+        <DialogContent className="w-full max-w-md bg-background border border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-foreground">
+              Add Note
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Add a text note to this chat session
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-foreground">
+                Note Text
+              </label>
+              <textarea
+                value={noteInput}
+                onChange={(e) => setNoteInput(e.target.value)}
+                placeholder="Enter your note here..."
+                rows={4}
+                className="w-full p-3 bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsNotesDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleNoteSubmit}
+              disabled={!noteInput.trim() || isAddingNote}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              {isAddingNote ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Adding...
+                </>
+              ) : (
+                "Add Note"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Google Drive Connector Dialog */}
       <GoogleDriveConnector
@@ -2639,16 +3193,6 @@ const ChatPage = () => {
       >
         <DialogContent className="max-w-full max-h-full w-screen h-[80vh] p-0 border-none bg-gradient-to-b from-[#2A3441] to-[#1A2332]">
           <div className="flex flex-col items-center justify-center h-full relative">
-            {/* Close button */}
-            {/* <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-6 right-6 h-12 w-12 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
-              onClick={() => setIsLiveChatDialogOpen(false)}
-            >
-              <X className="h-6 w-6" />
-            </Button> */}
-
             {/* Bot Lion Image */}
             <div className="mb-8">
               <Image
