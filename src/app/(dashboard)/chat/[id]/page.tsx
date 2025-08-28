@@ -228,12 +228,6 @@ const ChatPage = () => {
   const voiceChat = useVoiceChat({
     username: user?.username || "",
     sessionId: params.id as string,
-    onTranscriptReceived: (transcript) => {
-      console.log("Voice transcript received:", transcript);
-    },
-    onResponseReceived: (response) => {
-      console.log("Voice response received:", response);
-    },
     onError: (error) => {
       console.error("Voice chat error:", error);
       toast.error(error);
@@ -956,7 +950,6 @@ const ChatPage = () => {
     }
 
     try {
-      toast.success(`Uploading ${file.name}...`);
       // Create FormData to send file to API route
       const formData = new FormData();
       formData.append("file", file);
@@ -1009,7 +1002,6 @@ const ChatPage = () => {
     }
     // Extract filename from URL or use a default
     const fileName = linkInput.split("/").pop() || "website-link";
-    toast.success(`Adding link: ${linkInput}`);
     uploadSource({
       gcs_url: linkInput,
       file_name: fileName,
@@ -1030,12 +1022,6 @@ const ChatPage = () => {
       toast.error("Please select a chat session");
       return;
     }
-
-    toast.success(
-      `Adding note: ${noteInput.substring(0, 50)}${
-        noteInput.length > 50 ? "..." : ""
-      }`
-    );
 
     addNote({
       chat_session_id: currentSessionId,

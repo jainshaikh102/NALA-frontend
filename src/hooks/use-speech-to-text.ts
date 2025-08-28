@@ -160,7 +160,6 @@ export function useSpeechToText(options: SpeechToTextOptions = {}) {
       if (recognition) {
         recognitionRef.current = recognition;
         recognition.start();
-        toast.success("Listening... Speak now!");
       }
     } catch (err) {
       const errorMsg = "Failed to start speech recognition";

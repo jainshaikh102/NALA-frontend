@@ -63,7 +63,7 @@ export function useImageGeneration(
     },
     onSuccess: (data) => {
       if (data.success && data.base64_image) {
-        toast.success("Image generated successfully!");
+        // toast.success("Image generated successfully!");
         // Call the callback to add bot message
         if (onImageGenerated) {
           onImageGenerated(data);
@@ -143,7 +143,7 @@ export function useVideoGeneration(
     },
     onSuccess: (data) => {
       if (data.status === "success" || data.video_url) {
-        toast.success("Video generated successfully!");
+        // toast.success("Video generated successfully!");
         // Call the callback to add bot message
         if (onVideoGenerated) {
           onVideoGenerated(data);
