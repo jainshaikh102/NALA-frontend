@@ -67,7 +67,7 @@ const CountryListenershipDisplay: React.FC<CountryListenershipDisplayProps> = ({
     <div className="space-y-4">
       {/* Country Listenership Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-        {sortedData.map((country, index) => (
+        {sortedData?.map((country, index) => (
           <Card
             key={`${country.countryCode}-${index}`}
             className="bg-card hover:bg-muted/50 transition-colors"
@@ -78,7 +78,7 @@ const CountryListenershipDisplay: React.FC<CountryListenershipDisplayProps> = ({
 
                 {/* Percentage */}
                 <div className="text-2xl font-bold text-white">
-                  {country.percentage.toFixed(2)}%
+                  {Number(country?.percentage).toFixed(2)}%
                 </div>
 
                 {/* Country Name */}
