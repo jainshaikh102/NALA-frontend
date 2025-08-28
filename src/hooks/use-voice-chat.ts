@@ -1,5 +1,5 @@
 "use client";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { useSpeechToText } from "./use-speech-to-text";
 import { useTextToSpeech } from "./use-text-to-speech";
@@ -19,21 +19,28 @@ interface ExecuteQueryResponse {
 }
 
 export function useVoiceChat(options: VoiceChatOptions) {
-  const { username, sessionId, onTranscriptReceived, onResponseReceived, onError } = options;
+  const {
+    username,
+    sessionId,
+    onTranscriptReceived,
+    onResponseReceived,
+    onError,
+  } = options;
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentTranscript, setCurrentTranscript] = useState("");
   const [currentResponse, setCurrentResponse] = useState("");
   const [stage, setStage] = useState<
-    "idle" | "listening" | "processing" | "speaking" | "error"
+    "idle" | "listening" | "processing" | "speaking" | "error" | "waiting"
   >("idle");
 
   const processingRef = useRef(false);
+  const autoExecuteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Speech-to-text hook
   const speechToText = useSpeechToText({
-    language: "en-US",
-    continuous: false, // Single utterance for voice chat
+    language: "en-UK",
+    continuous: true, // Enable continuous listening for auto-execution
     interimResults: true,
   });
 
@@ -57,15 +64,16 @@ export function useVoiceChat(options: VoiceChatOptions) {
   // Execute query API call
   const executeQuery = useCallback(
     async (query: string): Promise<string> => {
-      const response = await fetch("/api/execute-query", {
+      const response = await fetch("/api/chat/execute-query", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          query: query.trim(),
-          session_id: sessionId,
+          question: query.trim(),
+          chat_session_id: sessionId,
           username: username,
+          model_name: "gemini-2.0-flash-001",
         }),
       });
 
@@ -88,12 +96,39 @@ export function useVoiceChat(options: VoiceChatOptions) {
     [sessionId, username]
   );
 
+  // Clear auto-execute timeout
+  const clearAutoExecuteTimeout = useCallback(() => {
+    if (autoExecuteTimeoutRef.current) {
+      clearTimeout(autoExecuteTimeoutRef.current);
+      autoExecuteTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Set auto-execute timeout (2 seconds after user stops talking)
+  const setAutoExecuteTimeout = useCallback(
+    (transcript: string) => {
+      clearAutoExecuteTimeout();
+
+      if (transcript.trim()) {
+        setStage("waiting"); // Show waiting state
+        autoExecuteTimeoutRef.current = setTimeout(() => {
+          console.log("Auto-executing query after 2 seconds of silence");
+          processVoiceInput(transcript);
+        }, 2000); // 2 seconds delay
+      }
+    },
+    [clearAutoExecuteTimeout]
+  );
+
   // Process voice input end-to-end
   const processVoiceInput = useCallback(
     async (transcript: string) => {
       if (processingRef.current || !transcript.trim()) {
         return;
       }
+
+      // Clear any pending auto-execute timeout
+      clearAutoExecuteTimeout();
 
       processingRef.current = true;
       setIsProcessing(true);
@@ -112,7 +147,15 @@ export function useVoiceChat(options: VoiceChatOptions) {
         // Synthesize and play response
         await textToSpeech.synthesizeText(response, username);
 
-        toast.success("Voice interaction completed successfully");
+        // Clear transcript and reset to idle state after successful completion
+        setTimeout(() => {
+          setCurrentTranscript("");
+          speechToText.reset(); // Clear speech recognition transcript
+          setStage("idle");
+          setIsProcessing(false);
+          processingRef.current = false;
+        }, 1000); // Small delay to let user see the response
+
       } catch (error) {
         const errorMsg = `Voice processing failed: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -126,13 +169,28 @@ export function useVoiceChat(options: VoiceChatOptions) {
         processingRef.current = false;
       }
     },
-    [executeQuery, textToSpeech, username, onTranscriptReceived, onResponseReceived, onError]
+    [
+      executeQuery,
+      textToSpeech,
+      username,
+      onTranscriptReceived,
+      onResponseReceived,
+      onError,
+      clearAutoExecuteTimeout,
+    ]
   );
+
+  // Monitor transcript changes for auto-execution
+  useEffect(() => {
+    if (stage === "listening" && speechToText.transcript) {
+      // Set up auto-execution timeout when user has spoken something
+      setAutoExecuteTimeout(speechToText.transcript);
+    }
+  }, [speechToText.transcript, stage, setAutoExecuteTimeout]);
 
   // Start voice recording
   const startVoiceRecording = useCallback(() => {
     if (isProcessing) {
-      toast.warning("Please wait for current processing to complete");
       return;
     }
 
@@ -140,7 +198,6 @@ export function useVoiceChat(options: VoiceChatOptions) {
     setCurrentTranscript("");
     setCurrentResponse("");
     speechToText.startListening();
-    toast.info("Listening... Speak now!");
   }, [isProcessing, speechToText]);
 
   // Stop voice recording and process
@@ -151,6 +208,9 @@ export function useVoiceChat(options: VoiceChatOptions) {
 
     speechToText.stopListening();
 
+    // Clear any pending auto-execute timeout since user manually stopped
+    clearAutoExecuteTimeout();
+
     // Wait a moment for final transcript
     setTimeout(() => {
       const finalTranscript = speechToText.transcript.trim();
@@ -158,22 +218,34 @@ export function useVoiceChat(options: VoiceChatOptions) {
         processVoiceInput(finalTranscript);
       } else {
         setStage("idle");
-        toast.warning("No speech detected. Please try again.");
       }
     }, 500);
-  }, [stage, speechToText, processVoiceInput]);
+  }, [stage, speechToText, processVoiceInput, clearAutoExecuteTimeout]);
 
   // Toggle voice recording
   const toggleVoiceRecording = useCallback(() => {
     if (stage === "listening") {
       stopVoiceRecording();
+    } else if (stage === "waiting") {
+      // Cancel auto-execution and return to idle
+      clearAutoExecuteTimeout();
+      setStage("idle");
+      speechToText.reset();
+      setCurrentTranscript("");
     } else if (stage === "idle") {
       startVoiceRecording();
     }
-  }, [stage, startVoiceRecording, stopVoiceRecording]);
+  }, [
+    stage,
+    startVoiceRecording,
+    stopVoiceRecording,
+    clearAutoExecuteTimeout,
+    speechToText,
+  ]);
 
   // Stop all voice activities
   const stopAllVoiceActivities = useCallback(() => {
+    clearAutoExecuteTimeout();
     speechToText.reset();
     textToSpeech.stopAudio();
     setStage("idle");
@@ -181,13 +253,15 @@ export function useVoiceChat(options: VoiceChatOptions) {
     setCurrentTranscript("");
     setCurrentResponse("");
     processingRef.current = false;
-  }, [speechToText, textToSpeech]);
+  }, [speechToText, textToSpeech, clearAutoExecuteTimeout]);
 
   // Get current status message
   const getStatusMessage = useCallback(() => {
     switch (stage) {
       case "listening":
         return "Listening... Speak now!";
+      // case "waiting":
+      //   return "Processing in 2 seconds... (or click mic to stop)";
       case "processing":
         return "Processing your request...";
       case "speaking":

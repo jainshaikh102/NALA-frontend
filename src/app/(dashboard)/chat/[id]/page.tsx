@@ -800,7 +800,6 @@ const ChatPage = () => {
         files,
         chatSessionId: chatId,
       });
-
     } catch (error) {
       console.error("Google Drive upload failed:", error);
       const errorMessage =
@@ -3191,23 +3190,10 @@ const ChatPage = () => {
                   voiceChat.isListening
                     ? "animate-pulse opacity-100 scale-110"
                     : voiceChat.isPlaying
-                    ? "animate-bounce opacity-100"
+                    ? "animate-pulse opacity-90 scale-105"
                     : "opacity-60"
                 }`}
               />
-
-              {/* Status indicator */}
-              <div className="absolute -top-2 -right-2">
-                {voiceChat.isListening && (
-                  <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50"></div>
-                )}
-                {voiceChat.isProcessing && (
-                  <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50"></div>
-                )}
-                {voiceChat.isPlaying && (
-                  <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
-                )}
-              </div>
             </div>
 
             {/* Response Text */}
@@ -3238,7 +3224,7 @@ const ChatPage = () => {
                     : voiceChat.isProcessing
                     ? "bg-yellow-600 hover:bg-yellow-700 animate-pulse"
                     : voiceChat.isPlaying
-                    ? "bg-green-600 hover:bg-green-700 animate-pulse"
+                    ? "bg-[#4A5568]"
                     : "bg-[#E53E3E] hover:bg-[#C53030]"
                 }`}
                 onClick={voiceChat.toggleVoiceRecording}
@@ -3265,20 +3251,6 @@ const ChatPage = () => {
                   }`}
                 />
               </Button>
-
-              {/* Additional control buttons when voice chat is active */}
-              {(voiceChat.isPlaying || voiceChat.currentResponse) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-12 w-12 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
-                  onClick={voiceChat.stopResponse}
-                  title="Stop audio playback"
-                >
-                  <X className="h-6 w-6" />
-                </Button>
-              )}
-
               <Button
                 variant="ghost"
                 size="icon"
@@ -3286,8 +3258,12 @@ const ChatPage = () => {
                 onClick={() => {
                   voiceChat.stopAllVoiceActivities();
                   setIsLiveChatDialogOpen(false);
+                  // Scroll to bottom to show latest chat history
+                  setTimeout(() => {
+                    scrollToBottom();
+                  }, 100);
                 }}
-                title="Close voice chat"
+                title="Close voice chat and return to chat history"
               >
                 <X className="h-8 w-8" />
               </Button>

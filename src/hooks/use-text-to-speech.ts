@@ -79,33 +79,51 @@ export function useTextToSpeech(options: TextToSpeechOptions = {}) {
             username: username,
           }),
         });
+        console.log("Audio synthesis response:", response);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data: SynthesizeResponse = await response.json();
+        // Check content type to determine how to handle response
+        const contentType = response.headers.get("content-type");
+        console.log("Response content type:", contentType);
 
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        // Handle different response formats
         let audioUrl: string;
 
-        if (data.audio_url) {
-          // Direct URL provided
-          audioUrl = data.audio_url;
-        } else if (data.audio_data) {
-          // Base64 audio data provided
-          const audioBlob = new Blob(
-            [Uint8Array.from(atob(data.audio_data), (c) => c.charCodeAt(0))],
-            { type: "audio/mpeg" }
-          );
+        if (contentType?.includes("audio/")) {
+          // Direct audio response (MP3, WAV, etc.) - This is your case
+          console.log("Handling direct audio response");
+          const audioBlob = await response.blob();
           audioUrl = URL.createObjectURL(audioBlob);
           setCurrentAudioUrl(audioUrl);
+        } else if (contentType?.includes("application/json")) {
+          // JSON response with audio data or URL
+          console.log("Handling JSON response");
+          const data: SynthesizeResponse = await response.json();
+          console.log("JSON data:", data);
+
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          if (data.audio_url) {
+            // Direct URL provided
+            audioUrl = data.audio_url;
+          } else if (data.audio_data) {
+            // Base64 audio data provided
+            const audioBlob = new Blob(
+              [Uint8Array.from(atob(data.audio_data), (c) => c.charCodeAt(0))],
+              { type: "audio/mpeg" }
+            );
+            audioUrl = URL.createObjectURL(audioBlob);
+            setCurrentAudioUrl(audioUrl);
+          } else {
+            throw new Error("No audio data found in response");
+          }
         } else {
-          // Assume response is audio blob
+          // Fallback: try to handle as audio blob
+          console.log("Fallback: treating as audio blob");
           const audioBlob = await response.blob();
           audioUrl = URL.createObjectURL(audioBlob);
           setCurrentAudioUrl(audioUrl);
@@ -125,7 +143,6 @@ export function useTextToSpeech(options: TextToSpeechOptions = {}) {
           await playAudio();
         }
 
-        toast.success("Audio synthesized successfully");
       } catch (error) {
         const errorMsg = `Text-to-speech failed: ${
           error instanceof Error ? error.message : "Unknown error"

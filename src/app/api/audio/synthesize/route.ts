@@ -38,11 +38,11 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("Audio synthesis API error:", response.status, errorText);
-      
+
       return NextResponse.json(
-        { 
+        {
           error: `Audio synthesis failed: ${response.status} ${response.statusText}`,
-          details: errorText 
+          details: errorText,
         },
         { status: response.status }
       );
@@ -50,48 +50,42 @@ export async function POST(request: NextRequest) {
 
     // Check if response is JSON or audio data
     const contentType = response.headers.get("content-type");
-    
-    if (contentType?.includes("application/json")) {
-      // JSON response with audio URL or base64 data
-      const data = await response.json();
-      return NextResponse.json(data);
-    } else if (contentType?.includes("audio/")) {
-      // Direct audio stream
+
+    if (contentType?.includes("audio/")) {
+
       const audioBuffer = await response.arrayBuffer();
-      
+
       return new NextResponse(audioBuffer, {
         status: 200,
         headers: {
           "Content-Type": contentType,
           "Content-Length": audioBuffer.byteLength.toString(),
           "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
         },
       });
+    } else if (contentType?.includes("application/json")) {
+      const data = await response.json();
+      return NextResponse.json(data);
     } else {
-      // Fallback: try to parse as JSON
-      try {
-        const data = await response.json();
-        return NextResponse.json(data);
-      } catch {
-        // If not JSON, treat as audio
-        const audioBuffer = await response.arrayBuffer();
-        return new NextResponse(audioBuffer, {
-          status: 200,
-          headers: {
-            "Content-Type": "audio/mpeg",
-            "Content-Length": audioBuffer.byteLength.toString(),
-            "Cache-Control": "no-cache",
-          },
-        });
-      }
+      const audioBuffer = await response.arrayBuffer();
+      return new NextResponse(audioBuffer, {
+        status: 200,
+        headers: {
+          "Content-Type": "audio/mpeg",
+          "Content-Length": audioBuffer.byteLength.toString(),
+          "Cache-Control": "no-cache",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
     }
   } catch (error) {
     console.error("Audio synthesis error:", error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: "Internal server error during audio synthesis",
-        details: error instanceof Error ? error.message : "Unknown error"
+        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }
     );
