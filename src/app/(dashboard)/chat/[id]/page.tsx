@@ -80,6 +80,7 @@ import { useRAGSources, useNotes } from "@/hooks/use-sources-notes";
 import { useGoogleDriveUpload } from "@/hooks/use-google-drive-upload";
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
+import { useVoiceChat } from "@/hooks/use-voice-chat";
 interface ChatMessage {
   id: number;
   type: "user" | "bot";
@@ -133,13 +134,6 @@ const ChatPage = () => {
     }, 150); // Slightly longer delay for mobile
   };
 
-  const [isRosterDialogOpen, setIsRosterDialogOpen] = useState(false);
-  const [allArtists, setAllArtists] = useState<string[]>([]);
-  const [filteredArtists, setFilteredArtists] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoadingArtists, setIsLoadingArtists] = useState(false);
-  const [selectedArtists, setSelectedArtists] = useState<string[]>([]);
-  const [tempSelectedArtists, setTempSelectedArtists] = useState<string[]>([]);
   const [isAddSourceDialogOpen, setIsAddSourceDialogOpen] = useState(false);
   const [isMobileAddSourceDialogOpen, setIsMobileAddSourceDialogOpen] =
     useState(false);
@@ -152,11 +146,6 @@ const ChatPage = () => {
     isOpen: boolean;
     artistName: string;
   }>({ isOpen: false, artistName: "" });
-  const [confirmDeleteChatDialog, setConfirmDeleteChatDialog] = useState<{
-    isOpen: boolean;
-    chatId: number;
-    chatTitle: string;
-  }>({ isOpen: false, chatId: 0, chatTitle: "" });
 
   // Chat session management state
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -175,16 +164,6 @@ const ChatPage = () => {
     isOpen: boolean;
     artistName: string;
   }>({ isOpen: false, artistName: "" });
-
-  // Generation state
-  const [generationType, setGenerationType] = useState<
-    "none" | "image" | "video"
-  >("none");
-  const [generatedContent, setGeneratedContent] = useState<{
-    type: "image" | "video" | null;
-    content: string;
-    timestamp: Date;
-  } | null>(null);
 
   // FAQ visibility state - track complete message cycles
   const [hasCompletedMessageCycle, setHasCompletedMessageCycle] =
@@ -244,6 +223,22 @@ const ChatPage = () => {
     }
     toggleListening();
   };
+
+  // Voice chat hook for live chat dialog
+  const voiceChat = useVoiceChat({
+    username: user?.username || "",
+    sessionId: params.id as string,
+    onTranscriptReceived: (transcript) => {
+      console.log("Voice transcript received:", transcript);
+    },
+    onResponseReceived: (response) => {
+      console.log("Voice response received:", response);
+    },
+    onError: (error) => {
+      console.error("Voice chat error:", error);
+      toast.error(error);
+    },
+  });
 
   // Chat session management hooks
   const {
@@ -421,40 +416,6 @@ const ChatPage = () => {
       console.error("Error removing artist:", error);
     },
   });
-
-  // Add artist mutation (using POST to /artists/select)
-  const addArtistMutation = usePost(`artists/select`, {
-    onSuccess: () => {
-      refetchSelectedArtists();
-      setTempSelectedArtists([]);
-      setIsRosterDialogOpen(false);
-    },
-    onError: (error) => {
-      console.error("Error adding artists:", error);
-    },
-  });
-
-  // // Mock data for sources
-  // const sources = [
-  //   {
-  //     id: 1,
-  //     name: "Explore management...",
-  //     type: "folder",
-  //     icon: "/svgs/GoogleDrive-WhiteIcon.svg",
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Domain: blacklionapp.com",
-  //     type: "website",
-  //     icon: "/svgs/Chain-WhiteIcon.svg",
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Dropbox folder",
-  //     type: "folder",
-  //     icon: "/svgs/DropBox-WhiteIcon.svg",
-  //   },
-  // ];
 
   // FAQ questions
   const preQuestions = [
@@ -659,15 +620,6 @@ const ChatPage = () => {
     }
   };
 
-  // Update selected artists when API data changes
-  useEffect(() => {
-    if (selectedArtistsData?.data && selectedArtistsData.data.length > 0) {
-      setSelectedArtists(selectedArtistsData.data);
-    } else {
-      setSelectedArtists([]);
-    }
-  }, [selectedArtistsData]);
-
   // Load chat history when session changes
   useEffect(() => {
     if (chatHistory && chatHistory.length > 0) {
@@ -807,89 +759,6 @@ const ChatPage = () => {
       setIsSwitchingChat(false);
     }
   }, [chatSessions, currentSessionId, isLoadingSessions, chatId, router]);
-  // Fetch all artists from API
-  const fetchAllArtists = async () => {
-    setIsLoadingArtists(true);
-    try {
-      const response = await fetch("/api/artists", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const artists = await response.json();
-      setAllArtists(artists);
-      setFilteredArtists(artists);
-    } catch (error) {
-      console.error("Error fetching artists:", error);
-      // Show empty state instead of mock data
-      setAllArtists([]);
-      setFilteredArtists([]);
-    } finally {
-      setIsLoadingArtists(false);
-    }
-  };
-
-  // Handle search in artists list
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    if (query.trim() === "") {
-      setFilteredArtists(allArtists);
-    } else {
-      const filtered = allArtists.filter((artist) =>
-        artist.toLowerCase().includes(query.toLowerCase())
-      );
-      setFilteredArtists(filtered);
-    }
-  };
-
-  // Toggle artist selection in dialog
-  const handleToggleArtist = (artistName: string) => {
-    setTempSelectedArtists((prev) => {
-      if (prev.includes(artistName)) {
-        return prev.filter((artist) => artist !== artistName);
-      } else {
-        return [...prev, artistName];
-      }
-    });
-  };
-
-  // Add selected artists to the main list
-  const handleAddSelectedArtists = async () => {
-    const newArtists = tempSelectedArtists.filter(
-      (artist) => !selectedArtists.includes(artist)
-    );
-
-    if (newArtists.length > 0 && user?.username) {
-      // Add each artist individually since API expects one artist per request
-      for (const artist of newArtists) {
-        try {
-          await addArtistMutation.mutateAsync({
-            username: user.username,
-            artist_name: artist,
-          });
-        } catch (error) {
-          console.error(`Error adding artist ${artist}:`, error);
-          // Continue with other artists even if one fails
-        }
-      }
-      // Refetch data after all additions
-      refetchSelectedArtists();
-      setTempSelectedArtists([]);
-      setIsRosterDialogOpen(false);
-    } else {
-      setTempSelectedArtists([]);
-      setIsRosterDialogOpen(false);
-    }
-  };
-
-  // Show confirmation dialog for removing artist
-  const handleRemoveArtist = (artistName: string) => {
-    setConfirmRemoveDialog({ isOpen: true, artistName });
-  };
 
   // Confirm artist removal
   const handleConfirmRemoveArtist = () => {
@@ -932,8 +801,6 @@ const ChatPage = () => {
         chatSessionId: chatId,
       });
 
-      // Refresh sources list after successful upload
-      // Note: The sources will be automatically updated through React Query
     } catch (error) {
       console.error("Google Drive upload failed:", error);
       const errorMessage =
@@ -1238,30 +1105,6 @@ const ChatPage = () => {
     }, 1000); // Small delay to ensure generation starts
   };
 
-  const handleGenerationSubmit = async (
-    prompt: string,
-    type: "none" | "image" | "video"
-  ) => {
-    if (!prompt.trim()) {
-      toast.error("Please enter a prompt");
-      return;
-    }
-
-    switch (type) {
-      case "image":
-        await handleImageGeneration(prompt);
-        break;
-      case "video":
-        await handleVideoGeneration(prompt);
-        break;
-      case "none":
-      default:
-        // Fall back to default chat behavior
-        handleSubmit(new Event("submit") as any);
-        break;
-    }
-  };
-
   // Handle adding generate item (only one at a time)
   const handleAddGenerateItem = (item: string) => {
     setSelectedGenerateItem(item);
@@ -1331,15 +1174,6 @@ const ChatPage = () => {
             action: () => downloadMessageAsExcel(message, message.id),
           },
         ];
-    }
-  };
-
-  // Open roster dialog and fetch artists
-  const handleOpenRosterDialog = () => {
-    setIsRosterDialogOpen(true);
-    setTempSelectedArtists([]); // Clear temporary selections when opening dialog
-    if (allArtists.length === 0) {
-      fetchAllArtists();
     }
   };
 
@@ -3347,21 +3181,50 @@ const ChatPage = () => {
             </div>
 
             {/* Audio Visualization */}
-            <div className="mb-8">
+            <div className="mb-8 relative">
               <Image
                 src="/svgs/AudioImage.svg"
                 alt="Audio Visualization"
                 width={300}
                 height={80}
-                className="object-contain"
+                className={`object-contain transition-all duration-300 ${
+                  voiceChat.isListening
+                    ? "animate-pulse opacity-100 scale-110"
+                    : voiceChat.isPlaying
+                    ? "animate-bounce opacity-100"
+                    : "opacity-60"
+                }`}
               />
+
+              {/* Status indicator */}
+              <div className="absolute -top-2 -right-2">
+                {voiceChat.isListening && (
+                  <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse shadow-lg shadow-red-500/50"></div>
+                )}
+                {voiceChat.isProcessing && (
+                  <div className="w-4 h-4 bg-yellow-500 rounded-full animate-pulse shadow-lg shadow-yellow-500/50"></div>
+                )}
+                {voiceChat.isPlaying && (
+                  <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
+                )}
+              </div>
             </div>
 
             {/* Response Text */}
-            <div className="mb-12 text-center max-w-md">
-              <p className="text-white text-lg">
-                I have generated the comprehensive valuation report for Cailboy
+            <div className="mb-12 text-center max-w-md px-4">
+              <p className="text-white text-lg mb-2">
+                {voiceChat.currentResponse || voiceChat.getStatusMessage()}
               </p>
+              {voiceChat.currentTranscript && (
+                <p className="text-gray-300 text-sm italic">
+                  "{voiceChat.currentTranscript}"
+                </p>
+              )}
+              {voiceChat.interimTranscript && (
+                <p className="text-gray-400 text-sm italic opacity-70">
+                  {voiceChat.interimTranscript}...
+                </p>
+              )}
             </div>
 
             {/* Control Buttons */}
@@ -3369,30 +3232,62 @@ const ChatPage = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-16 w-16 rounded-full text-white ${
-                  isListening
-                    ? "bg-red-600 hover:bg-red-700 animate-pulse"
+                className={`h-16 w-16 rounded-full text-white transition-all duration-200 ${
+                  voiceChat.isListening
+                    ? "bg-red-600 hover:bg-red-700 animate-pulse shadow-lg shadow-red-500/50"
+                    : voiceChat.isProcessing
+                    ? "bg-yellow-600 hover:bg-yellow-700 animate-pulse"
+                    : voiceChat.isPlaying
+                    ? "bg-green-600 hover:bg-green-700 animate-pulse"
                     : "bg-[#E53E3E] hover:bg-[#C53030]"
                 }`}
-                onClick={handleMicClick}
-                disabled={!isSpeechSupported}
+                onClick={voiceChat.toggleVoiceRecording}
+                disabled={!voiceChat.isSupported || voiceChat.isProcessing}
                 title={
-                  !isSpeechSupported
-                    ? "Speech recognition not supported"
-                    : isListening
-                    ? "Stop listening"
-                    : "Start voice input"
+                  !voiceChat.isSupported
+                    ? "Voice chat not supported in this browser"
+                    : voiceChat.isListening
+                    ? "Stop recording"
+                    : voiceChat.isProcessing
+                    ? "Processing..."
+                    : voiceChat.isPlaying
+                    ? "Playing response"
+                    : "Start voice chat"
                 }
               >
                 <Mic
-                  className={`h-8 w-8 ${isListening ? "animate-pulse" : ""}`}
+                  className={`h-8 w-8 ${
+                    voiceChat.isListening ||
+                    voiceChat.isProcessing ||
+                    voiceChat.isPlaying
+                      ? "animate-pulse"
+                      : ""
+                  }`}
                 />
               </Button>
+
+              {/* Additional control buttons when voice chat is active */}
+              {(voiceChat.isPlaying || voiceChat.currentResponse) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-12 w-12 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
+                  onClick={voiceChat.stopResponse}
+                  title="Stop audio playback"
+                >
+                  <X className="h-6 w-6" />
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-16 w-16 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
-                onClick={() => setIsLiveChatDialogOpen(false)}
+                onClick={() => {
+                  voiceChat.stopAllVoiceActivities();
+                  setIsLiveChatDialogOpen(false);
+                }}
+                title="Close voice chat"
               >
                 <X className="h-8 w-8" />
               </Button>
