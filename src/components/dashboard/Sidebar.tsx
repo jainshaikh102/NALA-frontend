@@ -61,13 +61,14 @@ const navigation: NavigationItem[] = [
     isSpecial: true,
     specialIcon: "/svgs/UserMusic-Icon.svg",
   },
-  {
-    name: "Help",
-    href: "/help",
-    icon: HelpCircle,
-    isSpecial: true,
-    specialIcon: "/svgs/Info-WhiteIcon.svg",
-  },
+  // commenting feedback option
+  // {
+  //   name: "Help",
+  //   href: "/help",
+  //   icon: HelpCircle,
+  //   isSpecial: true,
+  //   specialIcon: "/svgs/Info-WhiteIcon.svg",
+  // },
 ];
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
