@@ -242,6 +242,7 @@ const ChatPage = () => {
     endSession,
     isStartingSession,
     isEndingSession,
+    isEndingSpecificSession,
   } = useChatSessions(user?.username);
 
   // Chat history hook for current session
@@ -1615,9 +1616,9 @@ const ChatPage = () => {
                               session.preview
                             );
                           }}
-                          disabled={isEndingSession}
+                          disabled={isEndingSpecificSession(session.session_id)}
                         >
-                          {isEndingSession ? (
+                          {isEndingSpecificSession(session.session_id) ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
                             <X className="h-3 w-3 text-white" />
@@ -1736,9 +1737,9 @@ const ChatPage = () => {
                             session.preview
                           );
                         }}
-                        disabled={isEndingSession}
+                        disabled={isEndingSpecificSession(session.session_id)}
                       >
-                        {isEndingSession ? (
+                        {isEndingSpecificSession(session.session_id) ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <X className="h-3 w-3 text-white" />
@@ -3185,7 +3186,7 @@ const ChatPage = () => {
             {/* Response Text */}
             <div className="mb-12 text-center max-w-md px-4">
               <p className="text-white text-lg mb-2">
-                {voiceChat.currentResponse || voiceChat.getStatusMessage()}
+                {voiceChat.getStatusMessage()}
               </p>
               {voiceChat.currentTranscript && (
                 <p className="text-gray-300 text-sm italic">
@@ -3242,12 +3243,9 @@ const ChatPage = () => {
                 size="icon"
                 className="h-16 w-16 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
                 onClick={() => {
+                  scrollToBottom();
                   voiceChat.stopAllVoiceActivities();
                   setIsLiveChatDialogOpen(false);
-                  // Scroll to bottom to show latest chat history
-                  setTimeout(() => {
-                    scrollToBottom();
-                  }, 100);
                 }}
                 title="Close voice chat and return to chat history"
               >
