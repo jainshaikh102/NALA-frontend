@@ -2,6 +2,7 @@
 export { default as TextDisplay } from "./TextDisplay";
 export { default as ErrorDisplay } from "./ErrorDisplay";
 export { default as KeyValueDisplay } from "./KeyValueDisplay";
+export { default as MetricGridDisplay } from "./MetricGridDisplay";
 export { default as DataFrameDisplay } from "./DataFrameDisplay";
 export { default as ForecastChartDisplay } from "./ForecastChartDisplay";
 export { default as ViralityReportDisplay } from "./ViralityReportDisplay";
@@ -25,6 +26,14 @@ export interface ErrorDisplayProps extends BaseDisplayProps {
 }
 
 export interface KeyValueDisplayProps extends BaseDisplayProps {
+  data: {
+    data: { [key: string]: string | number };
+  };
+  title?: string;
+  hideTitle?: boolean;
+}
+
+export interface MetricGridDisplayProps extends BaseDisplayProps {
   data: {
     data: { [key: string]: string | number };
   };

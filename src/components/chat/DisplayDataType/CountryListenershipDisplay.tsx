@@ -61,7 +61,17 @@ const CountryListenershipDisplay: React.FC<CountryListenershipDisplayProps> = ({
   }
 
   // Sort data by percentage in descending order
-  const sortedData = [...data].sort((a, b) => b.percentage - a.percentage);
+  const sortedData = [...data].sort((a, b) => {
+    const aPercentage =
+      typeof a.percentage === "number"
+        ? a.percentage
+        : parseFloat(String(a.percentage));
+    const bPercentage =
+      typeof b.percentage === "number"
+        ? b.percentage
+        : parseFloat(String(b.percentage));
+    return bPercentage - aPercentage;
+  });
 
   return (
     <div className="space-y-4">
@@ -78,7 +88,10 @@ const CountryListenershipDisplay: React.FC<CountryListenershipDisplayProps> = ({
 
                 {/* Percentage */}
                 <div className="text-2xl font-bold text-white">
-                  {country.percentage.toFixed(2)}%
+                  {typeof country.percentage === "number"
+                    ? country.percentage.toFixed(2)
+                    : parseFloat(String(country.percentage)).toFixed(2)}
+                  %
                 </div>
 
                 {/* Country Name */}

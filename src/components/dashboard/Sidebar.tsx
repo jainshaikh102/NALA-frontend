@@ -52,7 +52,7 @@ const navigation: NavigationItem[] = [
     href: "/chat",
     icon: MessageSquare,
     isSpecial: true,
-    specialIcon: "/svgs/Golden-Paw.svg",
+    specialIcon: "/svgs/Bot-Icon.svg",
   },
   {
     name: "Artist Roaster",
@@ -106,12 +106,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* Logo */}
       <div className="flex items-center justify-center py-4 lg:py-6">
-        <div className="w-8 h-8 lg:w-10 lg:h-10 flex items-center justify-center">
+        <div className="w-12 h-12 lg:w-16 lg:h-16 flex items-center justify-center">
           <Image
-            src="/svgs/Blacklion-Logo.svg"
+            src="/svgs/Golden-Paw.svg"
             alt="Logo"
-            width={50}
-            height={50}
+            width={80}
+            height={80}
             className="filter w-full h-full object-contain"
           />
         </div>
@@ -144,8 +144,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Image
                   src={item.specialIcon}
                   alt={item.name}
-                  width={28}
-                  height={28}
+                  width={30}
+                  height={30}
                   // className={isActive ? "opacity-100" : "opacity-70"}
                 />
               ) : (

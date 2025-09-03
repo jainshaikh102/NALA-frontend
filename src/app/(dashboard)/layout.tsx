@@ -6,6 +6,7 @@ import { RouteGuard } from "@/components/auth/route-guard";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import "../globals.css";
+import Image from "next/image";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -58,6 +59,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
 
           <div className="pt-0 lg:pt-0">{children}</div>
+
+          <div className="w-full text-end p-4 bg-background items-end justify-end">
+            <div className="flex items-center justify-end flex-row space-x-2">
+              <span className="text-[16px] text-white">
+                2025 &copy; NALA BOT | Powered By Black Lion App
+              </span>
+              <Image
+                alt="Black Lion Logo"
+                src="/svgs/Blacklion-Logo.svg"
+                width={22.59}
+                height={24}
+              />
+            </div>
+          </div>
         </main>
       </div>
     </RouteGuard>

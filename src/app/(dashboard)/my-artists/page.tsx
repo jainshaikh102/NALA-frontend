@@ -1,87 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import flag from "country-code-emoji";
-
-// Manual flag mapping for common countries
-const countryFlags: { [key: string]: string } = {
-  US: "🇺🇸",
-  GB: "🇬🇧",
-  CA: "🇨🇦",
-  AU: "🇦🇺",
-  DE: "🇩🇪",
-  FR: "🇫🇷",
-  IT: "🇮🇹",
-  ES: "🇪🇸",
-  NL: "🇳🇱",
-  SE: "🇸🇪",
-  NO: "🇳🇴",
-  DK: "🇩🇰",
-  FI: "🇫🇮",
-  JP: "🇯🇵",
-  KR: "🇰🇷",
-  CN: "🇨🇳",
-  IN: "🇮🇳",
-  BR: "🇧🇷",
-  MX: "🇲🇽",
-  AR: "🇦🇷",
-  CL: "🇨🇱",
-  CO: "🇨🇴",
-  PE: "🇵🇪",
-  RU: "🇷🇺",
-  PL: "🇵🇱",
-  CZ: "🇨🇿",
-  HU: "🇭🇺",
-  AT: "🇦🇹",
-  CH: "🇨🇭",
-  BE: "🇧🇪",
-  PT: "🇵🇹",
-  GR: "🇬🇷",
-  TR: "🇹🇷",
-  IL: "🇮🇱",
-  EG: "🇪🇬",
-  ZA: "🇿🇦",
-  NG: "🇳🇬",
-  KE: "🇰🇪",
-  TH: "🇹🇭",
-  VN: "🇻🇳",
-  PH: "🇵🇭",
-  ID: "🇮🇩",
-  MY: "🇲🇾",
-  SG: "🇸🇬",
-  NZ: "🇳🇿",
-};
-
-const getCountryFlag = (countryCode: string) => {
-  if (!countryCode) {
-    return <span>🌍</span>;
-  }
-
-  const code = countryCode.toUpperCase();
-
-  // Use flag images from flagcdn.com for reliable display
-  return (
-    <img
-      src={`https://flagcdn.com/16x12/${code.toLowerCase()}.png`}
-      alt={`${code} flag`}
-      width={16}
-      height={12}
-      style={{
-        display: "inline-block",
-        verticalAlign: "middle",
-        borderRadius: "2px",
-      }}
-      onError={(e) => {
-        // Fallback to globe emoji if flag image fails
-        const target = e.target as HTMLImageElement;
-        target.style.display = "none";
-        const fallback = document.createElement("span");
-        fallback.textContent = "🌍";
-        target.parentNode?.insertBefore(fallback, target.nextSibling);
-      }}
-    />
-  );
-};
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -127,6 +46,123 @@ import {
   useUserRoster,
   type Artist,
 } from "@/hooks/use-artists";
+import ReactCountryFlag from "react-country-flag";
+import { formatListenersWithoutSuffix } from "@/helpers/numberUtils";
+
+// Country code to country name mapping
+const getCountryName = (countryCode: string): string => {
+  const countryNames: { [key: string]: string } = {
+    us: "United States",
+    gb: "United Kingdom",
+    ca: "Canada",
+    ng: "Nigeria",
+    nl: "Netherlands",
+    cr: "Costa Rica",
+    au: "Australia",
+    de: "Germany",
+    fr: "France",
+    it: "Italy",
+    es: "Spain",
+    br: "Brazil",
+    mx: "Mexico",
+    ar: "Argentina",
+    jp: "Japan",
+    kr: "South Korea",
+    cn: "China",
+    in: "India",
+    ru: "Russia",
+    za: "South Africa",
+    eg: "Egypt",
+    ma: "Morocco",
+    ke: "Kenya",
+    gh: "Ghana",
+    se: "Sweden",
+    no: "Norway",
+    dk: "Denmark",
+    fi: "Finland",
+    pl: "Poland",
+    cz: "Czech Republic",
+    hu: "Hungary",
+    ro: "Romania",
+    bg: "Bulgaria",
+    hr: "Croatia",
+    si: "Slovenia",
+    sk: "Slovakia",
+    lt: "Lithuania",
+    lv: "Latvia",
+    ee: "Estonia",
+    ie: "Ireland",
+    pt: "Portugal",
+    ch: "Switzerland",
+    at: "Austria",
+    be: "Belgium",
+    lu: "Luxembourg",
+    mt: "Malta",
+    cy: "Cyprus",
+    gr: "Greece",
+    tr: "Turkey",
+    il: "Israel",
+    ae: "United Arab Emirates",
+    sa: "Saudi Arabia",
+    qa: "Qatar",
+    kw: "Kuwait",
+    bh: "Bahrain",
+    om: "Oman",
+    jo: "Jordan",
+    lb: "Lebanon",
+    sy: "Syria",
+    iq: "Iraq",
+    ir: "Iran",
+    af: "Afghanistan",
+    pk: "Pakistan",
+    bd: "Bangladesh",
+    lk: "Sri Lanka",
+    mv: "Maldives",
+    np: "Nepal",
+    bt: "Bhutan",
+    mm: "Myanmar",
+    th: "Thailand",
+    la: "Laos",
+    kh: "Cambodia",
+    vn: "Vietnam",
+    my: "Malaysia",
+    sg: "Singapore",
+    id: "Indonesia",
+    ph: "Philippines",
+    tw: "Taiwan",
+    hk: "Hong Kong",
+    mo: "Macau",
+    mn: "Mongolia",
+    kz: "Kazakhstan",
+    kg: "Kyrgyzstan",
+    tj: "Tajikistan",
+    tm: "Turkmenistan",
+    uz: "Uzbekistan",
+    other: "Other Countries",
+  };
+
+  return countryNames[countryCode.toLowerCase()] || countryCode.toUpperCase();
+};
+
+// Component to render country flag using react-country-flag
+const CountryFlag: React.FC<{ countryCode: string }> = ({ countryCode }) => {
+  // Handle special case for "other"
+  if (countryCode.toLowerCase() === "other") {
+    return <span className="text-sm">🌍</span>;
+  }
+
+  return (
+    <ReactCountryFlag
+      countryCode={countryCode.toUpperCase()}
+      svg
+      style={{
+        width: "1.2em",
+        height: "1.2em",
+      }}
+      title={countryCode.toUpperCase()}
+    />
+  );
+};
 
 export default function MyArtistsPage() {
   // State for dialog and artist management
@@ -314,9 +350,11 @@ export default function MyArtistsPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden">
                         {artist?.picture_url ? (
-                          <img
+                          <Image
                             src={artist?.picture_url}
                             alt={artist.name}
+                            width={60}
+                            height={60}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -328,75 +366,55 @@ export default function MyArtistsPage() {
                           {artist.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-base sm:text-lg">
-                            {getCountryFlag(
-                              typeof artist.country === "string"
-                                ? artist.country
-                                : artist.country?.code || artist.country?.name
-                            )}
-                          </span>
-                          {/* <span className="text-gray-300 text-xs sm:text-sm">
-                            {typeof artist.country === "string"
-                              ? artist.country
-                              : artist.country?.code ||
-                                artist.country?.name ||
-                                "Unknown"}
-                          </span> */}
+                          {artist.country && (
+                            <>
+                              <CountryFlag
+                                countryCode={
+                                  typeof artist.country === "string"
+                                    ? artist.country
+                                    : artist.country?.code ||
+                                      artist.country?.name ||
+                                      "other"
+                                }
+                              />
+                              <span className="text-gray-300 text-xs sm:text-sm">
+                                {getCountryName(
+                                  typeof artist.country === "string"
+                                    ? artist.country
+                                    : artist.country?.code ||
+                                        artist.country?.name ||
+                                        "other"
+                                )}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    {/* Revenue Estimate */}
+                    {/* Listenership */}
                     <div className="mb-4">
                       <p className="text-gray-400 text-xs sm:text-sm mb-2">
-                        LTM REVENUE ESTIMATE
+                        LISTENERSHIP
                       </p>
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold text-xs sm:text-sm">
-                          M
-                        </div>
-                        <span className="font-extralight text-border">|</span>
-                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-white text-primary font-bold text-xs sm:text-sm">
-                          P
-                        </div>
-                      </div>
+                      <span className="text-white font-medium text-sm">
+                        {artist?.listenership
+                          ? formatListenersWithoutSuffix(artist.listenership)
+                          : "No data"}
+                      </span>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-end">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="rounded-full p-2"
+                        className="rounded-full bg-primary p-2"
+                        onClick={() => handleRemoveArtist(artist)}
+                        disabled={isRemovingArtist}
                       >
-                        <Mail className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                        <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                       </Button>
-
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full bg-white p-2"
-                        >
-                          <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full bg-white p-2"
-                        >
-                          <MessageSquareMore className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="rounded-full bg-primary p-2"
-                          onClick={() => handleRemoveArtist(artist)}
-                          disabled={isRemovingArtist}
-                        >
-                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                        </Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -433,14 +451,7 @@ export default function MyArtistsPage() {
                     COUNTRY
                   </TableHead>
                   <TableHead className="text-gray-300 font-medium py-4 px-6">
-                    EMAIL
-                  </TableHead>
-                  <TableHead className="text-gray-300 font-medium py-4 px-6">
-                    LTM REVENUE ESTIMATE
-                    <br />
-                    <span className="text-xs text-gray-400">
-                      MASTER | PUBLISHING
-                    </span>
+                    LISTENERSHIP
                   </TableHead>
                   <TableHead className="text-gray-300 font-medium py-4 px-6 rounded-r-2xl">
                     ACTIONS
@@ -471,72 +482,52 @@ export default function MyArtistsPage() {
                         </span>
                       </div>
                     </TableCell>
+
                     <TableCell className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">
-                          {getCountryFlag(
-                            typeof artist.country === "string"
-                              ? artist.country
-                              : artist.country?.code || artist.country?.name
-                          )}
-                        </span>
-                        {/* <span className="text-gray-300">
-                          {typeof artist.country === "string"
-                            ? artist.country
-                            : artist.country?.code ||
-                              artist.country?.name ||
-                              "Unknown"}
-                        </span> */}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-6">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="rounded-full"
-                        >
-                          <Mail className="w-4 h-4 text-primary" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary text-white font-bold">
-                          M
+                      {artist.country ? (
+                        <div className="flex items-center gap-2">
+                          <CountryFlag
+                            countryCode={
+                              typeof artist.country === "string"
+                                ? artist.country
+                                : artist.country?.code ||
+                                  artist.country?.name ||
+                                  "other"
+                            }
+                          />
+                          <span className="text-white">
+                            {getCountryName(
+                              typeof artist.country === "string"
+                                ? artist.country
+                                : artist.country?.code ||
+                                    artist.country?.name ||
+                                    "other"
+                            )}
+                          </span>
                         </div>
-                        <span className="font-extralight text-border">|</span>
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-primary font-bold">
-                          P
-                        </div>
-                      </div>
+                      ) : (
+                        <span className="text-gray-400">Unknown</span>
+                      )}
                     </TableCell>
+
                     <TableCell className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="rounded-full bg-white"
-                        >
-                          <Eye className="w-4 h-4 text-primary" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="rounded-full bg-white"
-                        >
-                          <MessageSquareMore className="w-4 h-4 text-primary" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          className="rounded-full bg-primary"
-                          onClick={() => handleRemoveArtist(artist)}
-                          disabled={isRemovingArtist}
-                        >
-                          <Trash2 className="w-4 h-4 text-white" />
-                        </Button>
-                      </div>
+                      <span className="text-white">
+                        {artist?.listenership
+                          ? formatListenersWithoutSuffix(artist.listenership)
+                          : "No data"}
+                      </span>
+                    </TableCell>
+
+                    <TableCell className="py-4 px-6">
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        className="rounded-full bg-primary"
+                        onClick={() => handleRemoveArtist(artist)}
+                        disabled={isRemovingArtist}
+                      >
+                        <Trash2 className="w-4 h-4 text-white" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -819,26 +810,36 @@ const AddNewArtistDialog = ({
                           {artist.name}
                         </div>
                         <div className="flex items-center space-x-2 text-xs text-gray-300">
-                          <span className="flex items-center space-x-1">
-                            {getCountryFlag(
-                              typeof artist.country === "string"
-                                ? artist.country
-                                : artist.country?.code || artist.country?.name
-                            )}
-                            {/* <span>
-                              {typeof artist.country === "string"
-                                ? artist.country
-                                : artist.country?.code ||
-                                  artist.country?.name ||
-                                  "Unknown"}
-                            </span> */}
-                          </span>
-                          <span>•</span>
+                          {artist.country && (
+                            <>
+                              <span className="flex items-center space-x-1">
+                                <CountryFlag
+                                  countryCode={
+                                    typeof artist.country === "string"
+                                      ? artist.country
+                                      : artist.country?.code ||
+                                        artist.country?.name ||
+                                        "other"
+                                  }
+                                />
+                                <span>
+                                  {getCountryName(
+                                    typeof artist.country === "string"
+                                      ? artist.country
+                                      : artist.country?.code ||
+                                          artist.country?.name ||
+                                          "other"
+                                  )}
+                                </span>
+                              </span>
+                              <span>•</span>
+                            </>
+                          )}
                           <span>
                             {artist.listenership
-                              ? `${(artist.listenership / 1000000).toFixed(
-                                  1
-                                )}M listeners`
+                              ? formatListenersWithoutSuffix(
+                                  artist.listenership
+                                )
                               : "No data"}
                           </span>
                         </div>

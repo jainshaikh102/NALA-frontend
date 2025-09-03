@@ -11,12 +11,12 @@
  */
 export const addCommas = (num: number | string): string => {
   if (num === null || num === undefined) return "0";
-  
+
   const numStr = typeof num === "string" ? num : num.toString();
   const number = parseFloat(numStr);
-  
+
   if (isNaN(number)) return "0";
-  
+
   return number.toLocaleString();
 };
 
@@ -27,17 +27,20 @@ export const addCommas = (num: number | string): string => {
  * @returns Abbreviated number string
  * @example formatLargeNumber(1234567) => "1.2M"
  */
-export const formatLargeNumber = (num: number | string, decimals: number = 1): string => {
+export const formatLargeNumber = (
+  num: number | string,
+  decimals: number = 1
+): string => {
   if (num === null || num === undefined) return "0";
-  
+
   const numStr = typeof num === "string" ? num : num.toString();
   const number = parseFloat(numStr);
-  
+
   if (isNaN(number)) return "0";
-  
+
   const absNumber = Math.abs(number);
   const sign = number < 0 ? "-" : "";
-  
+
   if (absNumber >= 1e12) {
     return sign + (absNumber / 1e12).toFixed(decimals) + "T";
   } else if (absNumber >= 1e9) {
@@ -59,16 +62,19 @@ export const formatLargeNumber = (num: number | string, decimals: number = 1): s
  * @example formatNumberWithCommas(1234) => "1,234"
  * @example formatNumberWithCommas(1234567) => "1.2M"
  */
-export const formatNumberWithCommas = (num: number | string, decimals: number = 1): string => {
+export const formatNumberWithCommas = (
+  num: number | string,
+  decimals: number = 1
+): string => {
   if (num === null || num === undefined) return "0";
-  
+
   const numStr = typeof num === "string" ? num : num.toString();
   const number = parseFloat(numStr);
-  
+
   if (isNaN(number)) return "0";
-  
+
   const absNumber = Math.abs(number);
-  
+
   // Use abbreviations for numbers >= 1 million
   if (absNumber >= 1e6) {
     return formatLargeNumber(number, decimals);
@@ -87,20 +93,20 @@ export const formatNumberWithCommas = (num: number | string, decimals: number = 
  * @example formatCurrency(1234567.89) => "$1.23M"
  */
 export const formatCurrency = (
-  num: number | string, 
-  currency: string = "$", 
+  num: number | string,
+  currency: string = "$",
   decimals: number = 2
 ): string => {
   if (num === null || num === undefined) return currency + "0";
-  
+
   const numStr = typeof num === "string" ? num : num.toString();
   const number = parseFloat(numStr);
-  
+
   if (isNaN(number)) return currency + "0";
-  
+
   const absNumber = Math.abs(number);
   const sign = number < 0 ? "-" : "";
-  
+
   if (absNumber >= 1e6) {
     return sign + currency + formatLargeNumber(absNumber, decimals);
   } else {
@@ -115,14 +121,17 @@ export const formatCurrency = (
  * @returns Formatted percentage string
  * @example formatPercentage(0.1234) => "12.3%"
  */
-export const formatPercentage = (num: number | string, decimals: number = 1): string => {
+export const formatPercentage = (
+  num: number | string,
+  decimals: number = 1
+): string => {
   if (num === null || num === undefined) return "0%";
-  
+
   const numStr = typeof num === "string" ? num : num.toString();
   const number = parseFloat(numStr);
-  
+
   if (isNaN(number)) return "0%";
-  
+
   return (number * 100).toFixed(decimals) + "%";
 };
 
@@ -133,7 +142,10 @@ export const formatPercentage = (num: number | string, decimals: number = 1): st
  * @returns Formatted follower count string
  * @example formatFollowers(1234567) => "1.2M followers"
  */
-export const formatFollowers = (num: number | string, decimals: number = 1): string => {
+export const formatFollowers = (
+  num: number | string,
+  decimals: number = 1
+): string => {
   const formatted = formatLargeNumber(num, decimals);
   return formatted + " followers";
 };
@@ -145,9 +157,20 @@ export const formatFollowers = (num: number | string, decimals: number = 1): str
  * @returns Formatted listener count string
  * @example formatListeners(1234567) => "1.2M listeners"
  */
-export const formatListeners = (num: number | string, decimals: number = 1): string => {
+export const formatListeners = (
+  num: number | string,
+  decimals: number = 1
+): string => {
   const formatted = formatLargeNumber(num, decimals);
   return formatted + " listeners";
+};
+
+export const formatListenersWithoutSuffix = (
+  num: number | string,
+  decimals: number = 1
+): string => {
+  const formatted = formatLargeNumber(num, decimals);
+  return formatted;
 };
 
 /**
@@ -157,7 +180,10 @@ export const formatListeners = (num: number | string, decimals: number = 1): str
  * @returns Formatted view count string
  * @example formatViews(1234567) => "1.2M views"
  */
-export const formatViews = (num: number | string, decimals: number = 1): string => {
+export const formatViews = (
+  num: number | string,
+  decimals: number = 1
+): string => {
   const formatted = formatLargeNumber(num, decimals);
   return formatted + " views";
 };

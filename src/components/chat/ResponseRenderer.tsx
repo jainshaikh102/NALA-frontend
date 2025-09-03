@@ -6,6 +6,7 @@ import {
   ErrorDisplay,
   DataFrameDisplay,
   KeyValueDisplay,
+  MetricGridDisplay,
   ViralityReportDisplay,
   ForecastChartDisplay,
   PlaylistRecommendationDisplay,
@@ -102,6 +103,8 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           return <DataFrameDisplay data={data as any} />;
         case "key_value":
           return <KeyValueDisplay data={data as any} />;
+        case "metric_grid":
+          return <MetricGridDisplay data={data as any} />;
         case "virality_report":
           return <ViralityReportDisplay data={data as any} />;
         case "forecast_chart":
@@ -419,6 +422,16 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           <div className="space-y-4">
             {answerStr ? <TextDisplay content={answerStr} /> : null}
             {displayData ? <KeyValueDisplay data={displayData as any} /> : null}
+          </div>
+        );
+
+      case "metric_grid":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <MetricGridDisplay data={displayData as any} />
+            ) : null}
           </div>
         );
 

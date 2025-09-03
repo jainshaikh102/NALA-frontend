@@ -3,6 +3,7 @@ import {
   TextDisplay,
   ErrorDisplay,
   KeyValueDisplay,
+  MetricGridDisplay,
   DataFrameDisplay,
   ForecastChartDisplay,
   ViralityReportDisplay,
@@ -40,6 +41,9 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({ data }) => {
 
     case "key_value":
       return <KeyValueDisplay data={display_data} />;
+
+    case "metric_grid":
+      return <MetricGridDisplay data={display_data} />;
 
     case "dataframe":
       return <DataFrameDisplay data={display_data} />;
@@ -105,6 +109,7 @@ export {
   TextDisplay,
   ErrorDisplay,
   KeyValueDisplay,
+  MetricGridDisplay,
   DataFrameDisplay,
   ForecastChartDisplay,
   ViralityReportDisplay,

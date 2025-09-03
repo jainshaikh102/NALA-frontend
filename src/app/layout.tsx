@@ -34,6 +34,7 @@ export default function RootLayout({
       {/* 👇 Hide browser scrollbar globally but keep scroll working */}
       <body
         className={`${dmSans.variable} font-sans antialiased scrollbar-hide`}
+        suppressHydrationWarning={true}
       >
         <QueryProvider>
           <AuthProvider>

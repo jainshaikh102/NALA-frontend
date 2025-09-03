@@ -96,19 +96,20 @@ const KeyValueDisplay: React.FC<KeyValueDisplayProps> = ({
       )}
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4">
         {entries.map(([key, value], index) => {
           const formattedLabel = convertSnakeCaseToTitleCase(key);
           const formattedValue = formatSmartValue(key, value);
 
           return (
-            <Card key={index} className="bg-primary">
-              <CardContent className="flex items-center justify-between h-full">
-                <div className="text-start flex flex-col justify-between h-full gap-4">
-                  <p className="text-base text-white mt-1">{formattedLabel}</p>
-
-                  <p className="text-2xl font-bold text-white">
+            <Card key={index} className="bg-[#5E6470]">
+              <CardContent className="">
+                <div className="text-center flex flex-col justify-center">
+                  <p className="text-2xl font-bold text-[#E55351]">
                     {formattedValue}
+                  </p>
+                  <p className="text-base text-muted-foreground mt-1">
+                    {formattedLabel}
                   </p>
                 </div>
               </CardContent>

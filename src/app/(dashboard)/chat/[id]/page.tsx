@@ -635,7 +635,8 @@ const ChatPage = () => {
           setCurrentSessionId(chatId);
           // Auto-switch to Sources tab to show sources/rosters for this chat
           setDesktopActiveTab("sources");
-          setMobileActiveTab("sources");
+          // On mobile, switch to chat tab so users can immediately start chatting
+          setMobileActiveTab("chat");
         } else if (!targetSession) {
           // Invalid chat ID from URL - show error and redirect to most recent chat
           setInvalidChatId(true);
@@ -1451,7 +1452,7 @@ const ChatPage = () => {
       </div>
 
       {/* Mobile/Tablet: Combined Container with Tabs */}
-      <div className="flex-1 lg:hidden flex flex-col bg-background rounded-lg overflow-hidden">
+      <div className="flex-1 lg:hidden flex flex-col bg-background rounded-lg overflow-hidden min-h-0">
         {/* Current Chat Indicator - Always Visible on Mobile */}
         {(currentSessionId || chatId === "new") && (
           <div className="mx-4 mt-4 p-3 bg-primary/10 border border-primary/20 rounded-lg">
@@ -1473,7 +1474,7 @@ const ChatPage = () => {
         <TabsBB
           value={mobileActiveTab}
           onValueChange={setMobileActiveTab}
-          className="flex-1 flex flex-col"
+          className="flex-1 flex flex-col min-h-0"
         >
           <div className="p-4 border-b border-border">
             <TabsListBB className="w-full">
@@ -1724,12 +1725,11 @@ const ChatPage = () => {
             </div>
           </TabsContentBB>
 
-          <TabsContentBB value="chat" className="flex-1 flex flex-col">
+          <TabsContentBB value="chat" className="flex-1 flex flex-col min-h-0">
             {/* Mobile Chat Content */}
             <div
               ref={mobileChatRef}
-              className="flex-1 overflow-y-auto overflow-x-hidden p-4 relative"
-              style={{ maxHeight: "calc(100vh - 200px)" }}
+              className="flex-1 overflow-y-auto overflow-x-hidden p-4 relative min-h-0"
             >
               {/* Loading overlay for chat loading */}
               {(isLoadingChats || isLoadingSessions) && (
@@ -1839,8 +1839,8 @@ const ChatPage = () => {
               )}
             </div>
 
-            {/* Mobile Chat Input */}
-            <div className="p-4 border-t border-border">
+            {/* Mobile Chat Input - Always visible at bottom */}
+            <div className="flex-shrink-0 p-4 border-t border-border bg-background">
               <div className="relative w-full">
                 <form onSubmit={handleSubmit} className="w-full">
                   <div className="flex w-full items-center space-x-2 border-[1px] border-[#FFFFFF4D] rounded-xl p-3">

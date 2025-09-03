@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { AlertTriangle } from "lucide-react";
 import KeyValueDisplay from "./KeyValueDisplay";
+import MetricGridDisplay from "./MetricGridDisplay";
 import DataFrameDisplay from "./DataFrameDisplay";
 import ForecastChartDisplay from "./ForecastChartDisplay";
 import ViralityReportDisplay from "./ViralityReportDisplay";
@@ -142,6 +143,26 @@ const MultiSectionReportDisplay: React.FC<MultiSectionReportDisplayProps> = ({
   const renderSection = (section: ReportSection, index: number) => {
     switch (section.section_type) {
       case "metric_grid":
+        // Handle both new and legacy data structures for metric_grid
+        const metricGridData = section.content as
+          | KeyValueContent
+          | LegacyKeyValueContent;
+        const processedMetricGridData = (metricGridData as KeyValueContent)
+          ?.data
+          ? (metricGridData as KeyValueContent)
+          : { data: metricGridData as LegacyKeyValueContent };
+        return (
+          <MetricGridDisplay
+            key={index}
+            data={
+              processedMetricGridData as {
+                data: { [key: string]: string | number };
+              }
+            }
+            hideTitle={true} // Hide title since we show it at section level
+          />
+        );
+
       case "key_value":
         // Handle both new and legacy data structures for key_value
         const keyValueData = section.content as
