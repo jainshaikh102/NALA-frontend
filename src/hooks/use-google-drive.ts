@@ -32,6 +32,7 @@ export interface DriveAuthResponse {
 const DRIVE_SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/drive.file",
+  "https://www.googleapis.com/auth/drive",
 ].join(" ");
 
 // Extend Window interface for Google APIs
@@ -216,6 +217,131 @@ export function useGoogleDrive() {
     }
   }, []);
 
+  // Force re-authentication with updated scopes
+  const forceReconnect = useMutation({
+    mutationFn: async () => {
+      // Clear existing token
+      safeStorage.removeItem("google_drive_token");
+      setAccessToken(null);
+      setIsConnected(false);
+
+      // Force new authentication
+      await connectDrive.mutateAsync();
+    },
+  });
+
+  // Download file from Google Drive
+  const downloadDriveFile = useMutation({
+    mutationFn: async (file: GoogleDriveFile): Promise<File> => {
+      if (!accessToken) {
+        throw new Error("No access token available");
+      }
+
+      // Get file content from Google Drive
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.statusText}`);
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+
+      // Create File object with proper mime type
+      const downloadedFile = new File([blob], file.name, {
+        type: file.mimeType || "application/octet-stream",
+        lastModified: new Date(file.modifiedTime).getTime(),
+      });
+
+      return downloadedFile;
+    },
+  });
+
+  // Download multiple files from Google Drive
+  const downloadMultipleDriveFiles = useMutation({
+    mutationFn: async (files: GoogleDriveFile[]): Promise<File[]> => {
+      if (!accessToken) {
+        throw new Error("No access token available");
+      }
+
+      const downloadPromises = files.map(async (file) => {
+        try {
+          // Check if file is a Google Workspace document that needs export
+          let downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+          let exportMimeType = file.mimeType;
+
+          // Handle Google Workspace documents
+          if (file.mimeType?.startsWith("application/vnd.google-apps.")) {
+            // Export Google Docs as PDF or other formats
+            if (file.mimeType === "application/vnd.google-apps.document") {
+              downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=application/pdf`;
+              exportMimeType = "application/pdf";
+            } else if (
+              file.mimeType === "application/vnd.google-apps.spreadsheet"
+            ) {
+              downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`;
+              exportMimeType =
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            } else if (
+              file.mimeType === "application/vnd.google-apps.presentation"
+            ) {
+              downloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}/export?mimeType=application/pdf`;
+              exportMimeType = "application/pdf";
+            } else {
+              throw new Error(
+                `Unsupported Google Workspace file type: ${file.mimeType}`
+              );
+            }
+          }
+
+          const response = await fetch(downloadUrl, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            if (response.status === 403) {
+              throw new Error(
+                `Access denied for ${file.name}. Please ensure you have permission to download this file and try reconnecting to Google Drive.`
+              );
+            } else if (response.status === 404) {
+              throw new Error(
+                `File ${file.name} not found or has been deleted.`
+              );
+            } else {
+              throw new Error(
+                `Failed to download ${file.name}: ${response.status} ${response.statusText}`
+              );
+            }
+          }
+
+          const blob = await response.blob();
+
+          // Use export mime type for Google Workspace documents
+          const finalMimeType = exportMimeType || "application/octet-stream";
+
+          return new File([blob], file.name, {
+            type: finalMimeType,
+            lastModified: new Date(file.modifiedTime).getTime(),
+          });
+        } catch (error) {
+          console.error(`Error downloading ${file.name}:`, error);
+          throw error;
+        }
+      });
+
+      return Promise.all(downloadPromises);
+    },
+  });
+
   return {
     isConnected,
     accessToken,
@@ -224,8 +350,13 @@ export function useGoogleDrive() {
     fetchDriveFiles,
     initializeDriveAuth,
     checkExistingConnection,
+    downloadDriveFile,
+    downloadMultipleDriveFiles,
+    forceReconnect,
     isConnecting: connectDrive.isPending,
     driveFiles: fetchDriveFiles.data || [],
     isLoadingFiles: fetchDriveFiles.isLoading,
+    isDownloading:
+      downloadDriveFile.isPending || downloadMultipleDriveFiles.isPending,
   };
 }
