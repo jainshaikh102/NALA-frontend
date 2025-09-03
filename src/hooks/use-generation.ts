@@ -38,7 +38,8 @@ export interface GenerateVideoResponse {
 
 // Hook for image generation
 export function useImageGeneration(
-  onImageGenerated?: (imageData: GenerateImageResponse) => void
+  onImageGenerated?: (imageData: GenerateImageResponse) => void,
+  onImageGenerationError?: (error: Error) => void
 ) {
   const generateImageMutation = useMutation<
     GenerateImageResponse,
@@ -59,22 +60,35 @@ export function useImageGeneration(
         throw new Error(errorData.error || "Failed to generate image");
       }
 
-      return response.json();
+      const result = await response.json();
+
+      // If the API returns success: false, treat it as an error
+      if (!result.success) {
+        throw new Error(
+          result.error || result.message || "Image generation failed"
+        );
+      }
+
+      return result;
     },
     onSuccess: (data) => {
-      if (data.success && data.base64_image) {
+      // Since we now throw errors for success: false, we only reach here on actual success
+      if (data.base64_image) {
         // toast.success("Image generated successfully!");
         // Call the callback to add bot message
         if (onImageGenerated) {
           onImageGenerated(data);
         }
-      } else if (data.error) {
-        toast.error(data.error);
       }
     },
     onError: (error) => {
       console.error("Failed to generate image:", error);
       toast.error(error.message || "Failed to generate image");
+
+      // Call the error callback if provided
+      if (onImageGenerationError) {
+        onImageGenerationError(error);
+      }
     },
   });
 
@@ -115,7 +129,8 @@ export function useImageGeneration(
 
 // Hook for video generation
 export function useVideoGeneration(
-  onVideoGenerated?: (videoData: GenerateVideoResponse) => void
+  onVideoGenerated?: (videoData: GenerateVideoResponse) => void,
+  onVideoGenerationError?: (error: Error) => void
 ) {
   const generateVideoMutation = useMutation<
     GenerateVideoResponse,
@@ -139,7 +154,16 @@ export function useVideoGeneration(
         throw new Error(errorData.error || "Failed to generate video");
       }
 
-      return response.json();
+      const result = await response.json();
+
+      // If the API returns success: false, treat it as an error
+      if (result.success === false) {
+        throw new Error(
+          result.error || result.message || "Video generation failed"
+        );
+      }
+
+      return result;
     },
     onSuccess: (data) => {
       if (data.status === "success" || data.video_url) {
@@ -153,6 +177,11 @@ export function useVideoGeneration(
     onError: (error) => {
       console.error("Failed to generate video:", error);
       toast.error(error.message || "Failed to generate video");
+
+      // Call the error callback if provided
+      if (onVideoGenerationError) {
+        onVideoGenerationError(error);
+      }
     },
   });
 
