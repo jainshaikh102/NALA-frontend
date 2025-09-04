@@ -1,6 +1,7 @@
 "use client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useState } from "react";
 
 // Types for chat session management
 export interface ChatSession {
@@ -35,6 +36,11 @@ export interface EndSessionRequest {
 // Hook for managing chat sessions
 export function useChatSessions(username?: string) {
   const queryClient = useQueryClient();
+
+  // Track which session is being deleted
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(
+    null
+  );
 
   // Fetch chat sessions for a user
   const {
@@ -101,6 +107,9 @@ export function useChatSessions(username?: string) {
   // End a chat session
   const endSessionMutation = useMutation<string, Error, EndSessionRequest>({
     mutationFn: async (data: EndSessionRequest) => {
+      // Set the deleting session ID when mutation starts
+      setDeletingSessionId(data.chat_session_id);
+
       const response = await fetch("/api/chat/end-session", {
         method: "POST",
         headers: {
@@ -116,7 +125,7 @@ export function useChatSessions(username?: string) {
 
       return response.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_, variables) => {
       toast.success("Chat session deleted successfully!");
       queryClient.setQueryData(
         ["chat-sessions", username],
@@ -127,10 +136,14 @@ export function useChatSessions(username?: string) {
           );
         }
       );
+      // Clear the deleting session ID
+      setDeletingSessionId(null);
     },
     onError: (error) => {
       console.error("Failed to end chat session:", error);
       toast.error(error.message || "Failed to delete chat session");
+      // Clear the deleting session ID on error
+      setDeletingSessionId(null);
     },
   });
 
@@ -143,6 +156,10 @@ export function useChatSessions(username?: string) {
     endSession: endSessionMutation.mutate,
     isStartingSession: startSessionMutation.isPending,
     isEndingSession: endSessionMutation.isPending,
+    // Function to check if a specific session is being deleted
+    isEndingSpecificSession: (sessionId: string) =>
+      deletingSessionId === sessionId,
+    deletingSessionId,
   };
 }
 

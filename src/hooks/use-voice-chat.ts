@@ -155,7 +155,6 @@ export function useVoiceChat(options: VoiceChatOptions) {
           setIsProcessing(false);
           processingRef.current = false;
         }, 1000); // Small delay to let user see the response
-
       } catch (error) {
         const errorMsg = `Voice processing failed: ${
           error instanceof Error ? error.message : "Unknown error"
@@ -258,10 +257,10 @@ export function useVoiceChat(options: VoiceChatOptions) {
   // Get current status message
   const getStatusMessage = useCallback(() => {
     switch (stage) {
+      case "idle":
+        return "Click microphone to start voice chat";
       case "listening":
         return "Listening... Speak now!";
-      // case "waiting":
-      //   return "Processing in 2 seconds... (or click mic to stop)";
       case "processing":
         return "Processing your request...";
       case "speaking":
@@ -269,7 +268,7 @@ export function useVoiceChat(options: VoiceChatOptions) {
       case "error":
         return "An error occurred. Please try again.";
       default:
-        return "Click microphone to start voice chat";
+        return "";
     }
   }, [stage]);
 

@@ -142,6 +142,7 @@ const ChatPage = () => {
   const [selectedGenerateItem, setSelectedGenerateItem] = useState<
     string | null
   >(null);
+  const [isGeneratePopoverOpen, setIsGeneratePopoverOpen] = useState(false);
   const [confirmRemoveDialog, setConfirmRemoveDialog] = useState<{
     isOpen: boolean;
     artistName: string;
@@ -242,6 +243,7 @@ const ChatPage = () => {
     endSession,
     isStartingSession,
     isEndingSession,
+    isEndingSpecificSession,
   } = useChatSessions(user?.username);
 
   // Chat history hook for current session
@@ -347,48 +349,92 @@ const ChatPage = () => {
     isShowingImage,
     generatedImageData,
     showImageData,
-  } = useImageGeneration((imageData) => {
-    // Remove thinking message and add actual response
-    setMessages((prev) => {
-      const withoutThinking = prev.filter((msg) => !msg.isThinking);
-      const botMessage: ChatMessage = {
-        id: Date.now() + 1,
-        type: "bot",
-        content: imageData.message || "Image generated successfully!",
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        displayData: imageData.base64_image,
-        dataType: "image_base64",
-      };
-      return [...withoutThinking, botMessage];
-    });
-    setHasCompletedMessageCycle(true);
-    scrollToBottom();
-  });
-
-  const { generateVideo, isGeneratingVideo, generatedVideoData } =
-    useVideoGeneration((videoData) => {
+  } = useImageGeneration(
+    // Success callback
+    (imageData) => {
       // Remove thinking message and add actual response
       setMessages((prev) => {
         const withoutThinking = prev.filter((msg) => !msg.isThinking);
         const botMessage: ChatMessage = {
           id: Date.now() + 1,
           type: "bot",
-          content: `Video generated successfully! Duration: ${videoData.duration}`,
+          content: imageData.message || "Image generated successfully!",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          displayData: videoData.video_url,
-          dataType: "video_url",
+          displayData: imageData.base64_image,
+          dataType: "image_base64",
         };
         return [...withoutThinking, botMessage];
       });
       setHasCompletedMessageCycle(true);
       scrollToBottom();
-    });
+    },
+    // Error callback
+    (error) => {
+      // Remove thinking message and add error response
+      setMessages((prev) => {
+        const withoutThinking = prev.filter((msg) => !msg.isThinking);
+        const errorMessage: ChatMessage = {
+          id: Date.now() + 1,
+          type: "bot",
+          content: `${error.message}`,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+        return [...withoutThinking, errorMessage];
+      });
+      setHasCompletedMessageCycle(true);
+      scrollToBottom();
+    }
+  );
+
+  const { generateVideo, isGeneratingVideo, generatedVideoData } =
+    useVideoGeneration(
+      // Success callback
+      (videoData) => {
+        // Remove thinking message and add actual response
+        setMessages((prev) => {
+          const withoutThinking = prev.filter((msg) => !msg.isThinking);
+          const botMessage: ChatMessage = {
+            id: Date.now() + 1,
+            type: "bot",
+            content: `Video generated successfully! Duration: ${videoData.duration}`,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            displayData: videoData.video_url,
+            dataType: "video_url",
+          };
+          return [...withoutThinking, botMessage];
+        });
+        setHasCompletedMessageCycle(true);
+        scrollToBottom();
+      },
+      // Error callback
+      (error) => {
+        // Remove thinking message and add error response
+        setMessages((prev) => {
+          const withoutThinking = prev.filter((msg) => !msg.isThinking);
+          const errorMessage: ChatMessage = {
+            id: Date.now() + 1,
+            type: "bot",
+            content: `${error.message}`,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          };
+          return [...withoutThinking, errorMessage];
+        });
+        setHasCompletedMessageCycle(true);
+        scrollToBottom();
+      }
+    );
 
   // Fetch selected artists from API
   const {
@@ -526,7 +572,6 @@ const ChatPage = () => {
       setHasCompletedMessageCycle(true);
     } catch (error) {
       console.error("Error sending message:", error);
-      // Remove thinking message and add error message
       setMessages((prev) => {
         const withoutThinking = prev.filter((msg) => !msg.isThinking);
         const errorMessage = {
@@ -576,13 +621,11 @@ const ChatPage = () => {
         }),
       };
 
-      // Use callback to ensure proper ordering
-      setMessages((prev) => {
-        const newMessages = [...prev, userMessage];
-        // Trigger image generation after state update
-        setTimeout(() => handleImageGeneration(inputText), 0);
-        return newMessages;
-      });
+      // Add user message first
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Then trigger image generation
+      handleImageGeneration(inputText);
 
       setInputText(""); // Clear input after generation
       setSelectedGenerateItem(null); // Clear selection
@@ -598,13 +641,11 @@ const ChatPage = () => {
         }),
       };
 
-      // Use callback to ensure proper ordering
-      setMessages((prev) => {
-        const newMessages = [...prev, userMessage];
-        // Trigger video generation after state update
-        setTimeout(() => handleVideoGeneration(inputText), 0);
-        return newMessages;
-      });
+      // Add user message first
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Then trigger video generation
+      handleVideoGeneration(inputText);
 
       setInputText(""); // Clear input after generation
       setSelectedGenerateItem(null); // Clear selection
@@ -1094,6 +1135,7 @@ const ChatPage = () => {
   // Handle adding generate item (only one at a time)
   const handleAddGenerateItem = (item: string) => {
     setSelectedGenerateItem(item);
+    setIsGeneratePopoverOpen(false); // Close popover after selection
   };
 
   // Handle removing generate item
@@ -1615,9 +1657,9 @@ const ChatPage = () => {
                               session.preview
                             );
                           }}
-                          disabled={isEndingSession}
+                          disabled={isEndingSpecificSession(session.session_id)}
                         >
-                          {isEndingSession ? (
+                          {isEndingSpecificSession(session.session_id) ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
                           ) : (
                             <X className="h-3 w-3 text-white" />
@@ -1736,9 +1778,9 @@ const ChatPage = () => {
                             session.preview
                           );
                         }}
-                        disabled={isEndingSession}
+                        disabled={isEndingSpecificSession(session.session_id)}
                       >
-                        {isEndingSession ? (
+                        {isEndingSpecificSession(session.session_id) ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
                         ) : (
                           <X className="h-3 w-3 text-white" />
@@ -2148,7 +2190,10 @@ const ChatPage = () => {
                         </div>
                       ) : (
                         // Show popover when no item is selected
-                        <Popover>
+                        <Popover
+                          open={isGeneratePopoverOpen}
+                          onOpenChange={setIsGeneratePopoverOpen}
+                        >
                           <PopoverTrigger asChild>
                             <Button
                               variant="ghost"
@@ -2517,7 +2562,10 @@ const ChatPage = () => {
                       </div>
                     ) : (
                       // Show popover when no item is selected
-                      <Popover>
+                      <Popover
+                        open={isGeneratePopoverOpen}
+                        onOpenChange={setIsGeneratePopoverOpen}
+                      >
                         <PopoverTrigger asChild>
                           <Button
                             variant="ghost"
@@ -3185,7 +3233,7 @@ const ChatPage = () => {
             {/* Response Text */}
             <div className="mb-12 text-center max-w-md px-4">
               <p className="text-white text-lg mb-2">
-                {voiceChat.currentResponse || voiceChat.getStatusMessage()}
+                {voiceChat.getStatusMessage()}
               </p>
               {voiceChat.currentTranscript && (
                 <p className="text-gray-300 text-sm italic">
@@ -3242,12 +3290,9 @@ const ChatPage = () => {
                 size="icon"
                 className="h-16 w-16 rounded-full bg-[#4A5568] hover:bg-[#5A6578] text-white"
                 onClick={() => {
+                  scrollToBottom();
                   voiceChat.stopAllVoiceActivities();
                   setIsLiveChatDialogOpen(false);
-                  // Scroll to bottom to show latest chat history
-                  setTimeout(() => {
-                    scrollToBottom();
-                  }, 100);
                 }}
                 title="Close voice chat and return to chat history"
               >
