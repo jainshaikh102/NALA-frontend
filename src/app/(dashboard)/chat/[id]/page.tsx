@@ -81,6 +81,10 @@ import { useGoogleDriveUpload } from "@/hooks/use-google-drive-upload";
 import { useGoogleDrive } from "@/hooks/use-google-drive";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { useVoiceChat } from "@/hooks/use-voice-chat";
+import { useDropboxUpload } from "@/hooks/use-dropbox-upload";
+import { useDropbox } from "@/hooks/use-dropbox";
+import { DropboxConnector } from "@/components/sources/dropbox-connector";
+
 interface ChatMessage {
   id: number;
   type: "user" | "bot";
@@ -104,6 +108,7 @@ const ChatPage = () => {
   const [isSwitchingChat, setIsSwitchingChat] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [invalidChatId, setInvalidChatId] = useState(false);
+  const [isDropboxDialogOpen, setIsDropboxDialogOpen] = useState(false);
 
   // Refs for auto-scrolling
   const desktopChatRef = useRef<HTMLDivElement>(null);
@@ -202,7 +207,15 @@ const ChatPage = () => {
     continuous: true,
     interimResults: true,
   });
+const dropboxHook = useDropbox();
+const {
+  uploadMultipleDropboxFiles,
+  uploadProgress: dropboxUploadProgress,
+  clearProgress: clearDropboxProgress,
+  isUploading: isUploadingDropboxFiles,
+} = useDropboxUpload(dropboxHook);
 
+  
   // Update input text when speech transcript changes
   useEffect(() => {
     if (transcript) {
@@ -1205,6 +1218,34 @@ const ChatPage = () => {
     }
   };
 
+  
+// Add this handler function
+const handleDropboxConnect = async (files: any[]) => {
+  if (!files || files.length === 0) {
+    toast.error("No files selected");
+    return;
+  }
+
+  if (!chatId) {
+    toast.error("No active chat session");
+    return;
+  }
+
+  try {
+    toast.info(`Starting upload of ${files.length} file(s) from Dropbox...`);
+    clearDropboxProgress();
+
+    await uploadMultipleDropboxFiles.mutateAsync({
+      files,
+      chatSessionId: chatId,
+    });
+  } catch (error) {
+    console.error("Dropbox upload failed:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    toast.error(`Upload failed: ${errorMessage}`);
+  }
+};
+
   return (
     <div className="h-screen bg-[#222C41] flex flex-col lg:flex-row gap-4 p-4 sm:p-4 lg:p-4 overflow-hidden scrollbar-hide rounded-2xl border border-[#FFFFFF3B]">
       {/* Invalid Chat ID Error */}
@@ -1336,10 +1377,7 @@ const ChatPage = () => {
                         {/* Google Drive */}
                         <div
                           className="bg-[#151E31] rounded-lg p-6 text-center hover:bg-[#FFFFFF]/5 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setIsAddSourceDialogOpen(false);
-                            setIsGoogleDriveDialogOpen(true);
-                          }}
+                         
                         >
                           <div className="flex flex-col items-start space-y-10">
                             <h3 className="text-white font-bold text-xl">
@@ -1360,13 +1398,17 @@ const ChatPage = () => {
                                   className="opacity-50 hover:opacity-100"
                                 />
                               </span>
+                              <span  onClick={() => {
+                            setIsAddSourceDialogOpen(false);
+                            setIsDropboxDialogOpen(true);
+                          }}>
                               <Image
                                 src="/svgs/DropBox-WhiteIcon.svg"
                                 alt="Dropbox"
                                 width={60}
                                 height={60}
                                 className="opacity-50 hover:opacity-100"
-                              />
+                              /></span>
                               <Image
                                 src="/svgs/Cloud-WhiteIcon.svg"
                                 alt="Dropbox"
@@ -1426,32 +1468,6 @@ const ChatPage = () => {
               </div>
 
               {/* Sources List */}
-              {/* <div className="p-4 space-y-3 border-b border-border">
-                {sources.map((source) => (
-                  <div
-                    key={source.id}
-                    className="flex items-center justify-between p-3 bg-secondary/50  hover:bg-secondary/80 transition-colors cursor-pointer rounded-full"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="w-6 h-6 bg-[#FFFFFF4D] rounded-full flex items-center justify-center">
-                        <Image
-                          src={source.icon}
-                          alt={source.name}
-                          width={12}
-                          height={12}
-                          className="opacity-70"
-                        />
-                      </div>
-                      <span className="text-sm text-foreground">
-                        {source.name}
-                      </span>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                      <MoreHorizontal className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div> */}
               <div className="p-4 space-y-3 border-b border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-foreground">
@@ -3194,6 +3210,15 @@ const ChatPage = () => {
         uploadProgress={uploadProgress}
         googleDriveHook={googleDriveHook}
       />
+      {/* Dropbox Connector Dialog */}
+      <DropboxConnector
+  isOpen={isDropboxDialogOpen}
+  onClose={() => setIsDropboxDialogOpen(false)}
+  onConnect={handleDropboxConnect}
+  isUploading={isUploadingDropboxFiles}
+  uploadProgress={dropboxUploadProgress}
+  dropboxHook={dropboxHook}
+/>
 
       {/* Live Chat Dialog */}
       <Dialog

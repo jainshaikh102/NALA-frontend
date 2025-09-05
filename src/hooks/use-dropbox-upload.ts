@@ -1,54 +1,50 @@
 "use client";
 import { useState } from "react";
-import { useMutation,useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useGoogleDrive, GoogleDriveFile } from "./use-google-drive";
+import { useDropbox, DropboxFile } from "./use-dropbox";
 import { useAuthStore } from "@/store/auth-store";
 
-export interface GoogleDriveUploadResult {
+export interface DropboxUploadResult {
   success: boolean;
   fileName: string;
   gcsUrl: string;
   ragResponse?: any;
 }
 
-export interface GoogleDriveUploadProgress {
+export interface DropboxUploadProgress {
   fileName: string;
   stage: "downloading" | "uploading" | "processing" | "complete" | "error";
   progress: number;
   error?: string;
 }
 
-export function useGoogleDriveUpload(
-  googleDriveHook?: ReturnType<typeof useGoogleDrive>
+export function useDropboxUpload(
+  dropboxHook?: ReturnType<typeof useDropbox>
 ) {
-  const defaultGoogleDriveHook = useGoogleDrive();
-  const actualGoogleDriveHook = googleDriveHook || defaultGoogleDriveHook;
+  const defaultDropboxHook = useDropbox();
+  const actualDropboxHook = dropboxHook || defaultDropboxHook;
   const {
-    downloadMultipleDriveFiles,
+    downloadMultipleDropboxFiles,
     accessToken,
     isConnected,
     forceReconnect,
-  } = actualGoogleDriveHook;
+  } = actualDropboxHook;
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const [uploadProgress, setUploadProgress] = useState<
-    GoogleDriveUploadProgress[]
-  >([]);
+  const [uploadProgress, setUploadProgress] = useState<DropboxUploadProgress[]>([]);
 
-  // Upload a single file from Google Drive to GCS and then to RAG
-  const uploadGoogleDriveFile = async (
-    file: GoogleDriveFile,
+  // Upload a single file from Dropbox to GCS and then to RAG
+  const uploadDropboxFile = async (
+    file: DropboxFile,
     chatSessionId: string
-  ): Promise<GoogleDriveUploadResult> => {
+  ): Promise<DropboxUploadResult> => {
     if (!user?.username) {
       throw new Error("User not authenticated");
     }
 
     if (!isConnected || !accessToken) {
-      throw new Error(
-        "Google Drive not connected. Please reconnect and try again."
-      );
+      throw new Error("Dropbox not connected. Please reconnect and try again.");
     }
 
     // Update progress - downloading
@@ -58,10 +54,8 @@ export function useGoogleDriveUpload(
     ]);
 
     try {
-      // Step 1: Download single file from Google Drive
-      const downloadedFiles = await downloadMultipleDriveFiles.mutateAsync([
-        file,
-      ]);
+      // Step 1: Download single file from Dropbox
+      const downloadedFiles = await downloadMultipleDropboxFiles.mutateAsync([file]);
       const downloadedFile = downloadedFiles[0];
 
       if (!downloadedFile) {
@@ -123,9 +117,7 @@ export function useGoogleDriveUpload(
 
       if (!ragResponse.ok) {
         const errorData = await ragResponse.json();
-        throw new Error(
-          `RAG upload failed: ${errorData.error || "Unknown error"}`
-        );
+        throw new Error(`RAG upload failed: ${errorData.error || "Unknown error"}`);
       }
 
       const ragData = await ragResponse.json();
@@ -140,6 +132,8 @@ export function useGoogleDriveUpload(
       );
  // Invalidate and refetch sources after successful upload
       queryClient.invalidateQueries({ queryKey: ['rag-sources', chatSessionId] });
+      
+
       return {
         success: true,
         fileName,
@@ -159,23 +153,21 @@ export function useGoogleDriveUpload(
     }
   };
 
-  // Upload multiple files from Google Drive
-  const uploadMultipleGoogleDriveFiles = useMutation({
+  // Upload multiple files from Dropbox
+  const uploadMultipleDropboxFiles = useMutation({
     mutationFn: async ({
       files,
       chatSessionId,
     }: {
-      files: GoogleDriveFile[];
+      files: DropboxFile[];
       chatSessionId: string;
-    }): Promise<GoogleDriveUploadResult[]> => {
+    }): Promise<DropboxUploadResult[]> => {
       if (!user?.username) {
         throw new Error("User not authenticated");
       }
 
       if (!isConnected || !accessToken) {
-        throw new Error(
-          "Google Drive not connected. Please reconnect and try again."
-        );
+        throw new Error("Dropbox not connected. Please reconnect and try again.");
       }
 
       // Initialize progress for all files
@@ -187,28 +179,24 @@ export function useGoogleDriveUpload(
         }))
       );
 
-      const results: GoogleDriveUploadResult[] = [];
+      const results: DropboxUploadResult[] = [];
       const errors: string[] = [];
 
       // Process files sequentially to avoid overwhelming the APIs
       for (const file of files) {
         try {
-          const result = await uploadGoogleDriveFile(file, chatSessionId);
+          const result = await uploadDropboxFile(file, chatSessionId);
           results.push(result);
           toast.success(`Successfully uploaded ${file.name}`);
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
-          const errorMessage =
-            error instanceof Error ? error.message : "Unknown error";
+          const errorMessage = error instanceof Error ? error.message : "Unknown error";
           errors.push(`${file.name}: ${errorMessage}`);
 
           // Check if it's a permission error and suggest re-authentication
-          if (
-            errorMessage.includes("Access denied") ||
-            errorMessage.includes("403")
-          ) {
+          if (errorMessage.includes("Access denied") || errorMessage.includes("403")) {
             toast.error(
-              `Permission denied for ${file.name}. Try reconnecting to Google Drive with updated permissions.`,
+              `Permission denied for ${file.name}. Try reconnecting to Dropbox with updated permissions.`,
               {
                 action: {
                   label: "Reconnect",
@@ -227,9 +215,7 @@ export function useGoogleDriveUpload(
       }
 
       if (errors.length > 0) {
-        toast.warning(
-          `${results.length} files uploaded successfully, ${errors.length} failed`
-        );
+        toast.warning(`${results.length} files uploaded successfully, ${errors.length} failed`);
       } else {
         toast.success(`All ${results.length} files uploaded successfully!`);
       }
@@ -244,9 +230,9 @@ export function useGoogleDriveUpload(
   };
 
   return {
-    uploadMultipleGoogleDriveFiles,
+    uploadMultipleDropboxFiles,
     uploadProgress,
     clearProgress,
-    isUploading: uploadMultipleGoogleDriveFiles.isPending,
+    isUploading: uploadMultipleDropboxFiles.isPending,
   };
 }

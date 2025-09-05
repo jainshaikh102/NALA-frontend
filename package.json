@@ -36,6 +36,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "country-code-emoji": "^2.3.0",
+    "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "js-cookie": "^3.0.5",
     "jspdf": "^3.0.1",
