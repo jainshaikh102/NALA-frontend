@@ -346,43 +346,44 @@ const ArtistComparisonReportDisplay: React.FC<
       </div>
 
       {/* Platform Presence Section */}
-      <div className="space-y-6">
-        <h3 className="text-lg font-semibold text-foreground">
-          Platform Presence
-        </h3>
-        {artists.map((artist) => (
-          <div key={`presence-${artist.id}`} className="space-y-4">
-            {/* Artist Strip */}
-            <div className="bg-[#2C3E50] rounded-lg p-4 flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage
-                  src={artist.images.thumb}
-                  alt={artist.name}
-                  className="object-cover"
-                />
-                <AvatarFallback className="bg-white/20 text-white">
-                  {artist.name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="text-white font-semibold text-lg truncate">
-                {artist.name}
-              </span>
-            </div>
-
-            {/* Platform Badges */}
-            <div className="flex flex-wrap gap-3">
-              {artist.platform_presence.map((platform, index) => (
-                <PlatformBadge
-                  key={`${artist.id}-${platform.platform}-${index}`}
-                  platform={platform}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 };
 
 export default ArtistComparisonReportDisplay;
+
+// <div className="space-y-6">
+//   <h3 className="text-lg font-semibold text-foreground">
+//     Platform Presence
+//   </h3>
+//   {artists.map((artist) => (
+//     <div key={`presence-${artist.id}`} className="space-y-4">
+//       {/* Artist Strip */}
+//       <div className="bg-[#2C3E50] rounded-lg p-4 flex items-center gap-3">
+//         <Avatar className="h-10 w-10">
+//           <AvatarImage
+//             src={artist.images.thumb}
+//             alt={artist.name}
+//             className="object-cover"
+//           />
+//           <AvatarFallback className="bg-white/20 text-white">
+//             {artist.name.charAt(0)}
+//           </AvatarFallback>
+//         </Avatar>
+//         <span className="text-white font-semibold text-lg truncate">
+//           {artist.name}
+//         </span>
+//       </div>
+
+//       {/* Platform Badges */}
+//       <div className="flex flex-wrap gap-3">
+//         {artist.platform_presence.map((platform, index) => (
+//           <PlatformBadge
+//             key={`${artist.id}-${platform.platform}-${index}`}
+//             platform={platform}
+//           />
+//         ))}
+//       </div>
+//     </div>
+//   ))}
+// </div>
