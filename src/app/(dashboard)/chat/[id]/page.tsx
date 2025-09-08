@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { ResponseRenderer } from "@/components/chat/ResponseRenderer";
 import {
   Plus,
-  MoreHorizontal,
   Send,
   Paperclip,
   PanelRight,
@@ -1148,7 +1147,7 @@ const {
   // Handle adding generate item (only one at a time)
   const handleAddGenerateItem = (item: string) => {
     setSelectedGenerateItem(item);
-    setIsGeneratePopoverOpen(false); // Close popover after selection
+    // No need to manually close popover if using uncontrolled approach
   };
 
   // Handle removing generate item
@@ -1409,13 +1408,13 @@ const handleDropboxConnect = async (files: any[]) => {
                                 height={60}
                                 className="opacity-50 hover:opacity-100"
                               /></span>
-                              <Image
+                              {/* <Image
                                 src="/svgs/Cloud-WhiteIcon.svg"
                                 alt="Dropbox"
                                 width={60}
                                 height={60}
                                 className="opacity-50 hover:opacity-100"
-                              />
+                              /> */}
                             </div>
                           </div>
                         </div>
@@ -2206,10 +2205,7 @@ const handleDropboxConnect = async (files: any[]) => {
                         </div>
                       ) : (
                         // Show popover when no item is selected
-                        <Popover
-                          open={isGeneratePopoverOpen}
-                          onOpenChange={setIsGeneratePopoverOpen}
-                        >
+                        <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="ghost"
@@ -2287,11 +2283,11 @@ const handleDropboxConnect = async (files: any[]) => {
                         className="w-full bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                       />
                       {/* Interim transcript indicator */}
-                      {interimTranscript && (
+                      {/* {interimTranscript && (
                         <div className="absolute bottom-0 left-0 text-xs text-gray-400 italic bg-gray-800 px-2 py-1 rounded">
                           {interimTranscript}...
                         </div>
-                      )}
+                      )} */}
                     </div>
 
                     {/* Right side buttons */}
@@ -2536,11 +2532,11 @@ const handleDropboxConnect = async (files: any[]) => {
                     className="w-full bg-transparent p-2 border-none outline-none text-foreground placeholder:text-muted-foreground disabled:opacity-50"
                   />
                   {/* Interim transcript indicator */}
-                  {interimTranscript && (
+                  {/* {interimTranscript && (
                     <div className="absolute bottom-0 left-2 text-xs text-gray-400 italic bg-gray-800 px-2 py-1 rounded">
                       {interimTranscript}...
                     </div>
-                  )}
+                  )} */}
                 </div>
                 <div className="flex items-center justify-between w-full space-x-2">
                   <div className="flex items-center space-x-1">
@@ -2578,10 +2574,7 @@ const handleDropboxConnect = async (files: any[]) => {
                       </div>
                     ) : (
                       // Show popover when no item is selected
-                      <Popover
-                        open={isGeneratePopoverOpen}
-                        onOpenChange={setIsGeneratePopoverOpen}
-                      >
+                      <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="ghost"
