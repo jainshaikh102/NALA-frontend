@@ -14,6 +14,7 @@ import {
   MultiSectionReportDisplay,
   PlatformDataDisplay,
   CountryListenershipDisplay,
+  ArtistComparisonReportDisplay,
 } from "./DataDisplayComponents";
 
 interface ResponseRendererProps {
@@ -130,6 +131,8 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
               title={countryTitle}
             />
           );
+        case "artist_comparison_report":
+          return <ArtistComparisonReportDisplay data={data as any} />;
         case "text":
           return <TextDisplay content={data as string} />;
         case "error":
@@ -507,6 +510,16 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
             {answerStr ? <TextDisplay content={answerStr} /> : null}
             {displayData ? (
               <CountryListenershipDisplay data={displayData as any} />
+            ) : null}
+          </div>
+        );
+
+      case "artist_comparison_report":
+        return (
+          <div className="space-y-4">
+            {answerStr ? <TextDisplay content={answerStr} /> : null}
+            {displayData ? (
+              <ArtistComparisonReportDisplay data={displayData as any} />
             ) : null}
           </div>
         );

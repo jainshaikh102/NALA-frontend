@@ -30,6 +30,18 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "blacklion-public-s3.s3.us-east-2.amazonaws.com",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.deezer.com",
+        port: "",
+        pathname: "/album/*/image",
+      },
     ],
   },
 };

@@ -65,7 +65,7 @@ export default function DashboardPage() {
                 START NEW CHAT
               </Button>
 
-              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
+              {/* <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:gap-4">
                 <Button
                   variant="outline"
                   size="lg"
@@ -87,7 +87,7 @@ export default function DashboardPage() {
                 >
                   Get Weekly Score for your Catalog
                 </Button>
-              </div>
+              </div> */}
             </div>
 
             <p className="text-lg sm:text-xl lg:text-2xl text-[#FFFFFF] tracking-widest">
@@ -115,7 +115,7 @@ export default function DashboardPage() {
         {/* My Chats Section */}
         <div className="mt-8 lg:mt-12">
           <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6">
-            My Chats
+            Recent Chats
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {chats.map((chat) => (
