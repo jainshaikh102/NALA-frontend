@@ -11,6 +11,7 @@ export { default as MultiSectionReportDisplay } from "./MultiSectionReportDispla
 export { default as MultiForecastDisplay } from "./MultiForecastDisplay";
 export { default as PlatformDataDisplay } from "./PlatformDataDisplay";
 export { default as CountryListenershipDisplay } from "./CountryListenershipDisplay";
+export { default as ArtistComparisonReportDisplay } from "./ArtistComparisonReportDisplay";
 
 // Type definitions for props
 export interface BaseDisplayProps {
@@ -148,4 +149,52 @@ export interface CountryListenershipDisplayProps extends BaseDisplayProps {
     percentage: number;
   }>;
   title?: string;
+}
+
+export interface ArtistComparisonReportDisplayProps extends BaseDisplayProps {
+  data: {
+    artists: Array<{
+      id: number;
+      name: string;
+      images: {
+        primary: string;
+        thumb: string;
+      };
+      platform_presence: Array<{
+        platform: string;
+        icon: string;
+        link: string | null;
+      }>;
+      spotify: {
+        streams: {
+          lifetime: number;
+        };
+        earnings: {
+          lifetime: number;
+        };
+      };
+      youtube: {
+        views: {
+          lifetime: number;
+        };
+        earnings: {
+          lifetime: number;
+        };
+      };
+      artist_total_earnings: {
+        l30d: number;
+        l12m: number;
+        lifetime: number;
+      };
+      top_tracks: Array<{
+        rank: number;
+        id: string;
+        title: string;
+        image: string | null;
+        earnings: {
+          l30d: number;
+        };
+      }>;
+    }>;
+  };
 }

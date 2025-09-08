@@ -1,7 +1,10 @@
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import { ForecastChartData, DataFrameData } from "./types";
-import { downloadDataFrameAsPDF, downloadDataFrameAsExcel } from "./DataFrameDownload";
+import {
+  downloadDataFrameAsPDF,
+  downloadDataFrameAsExcel,
+} from "./DataFrameDownload";
 
 // Add forecast data to PDF
 export const downloadForecastDataAsPDF = (

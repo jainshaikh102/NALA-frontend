@@ -95,28 +95,26 @@ const KeyValueDisplay: React.FC<KeyValueDisplayProps> = ({
         </div>
       )}
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-        {entries.map(([key, value], index) => {
-          const formattedLabel = convertSnakeCaseToTitleCase(key);
-          const formattedValue = formatSmartValue(key, value);
+      {/* Single Earnings Summary Card */}
+      <Card className="bg-[#FF7B79C7] border-none rounded-2xl p-6 w-full lg:w-2/3 xl:w-1/2">
+        <CardContent className="p-0 space-y-4">
+          {entries.map(([key, value], index) => {
+            const formattedLabel = convertSnakeCaseToTitleCase(key);
+            const formattedValue = formatSmartValue(key, value);
 
-          return (
-            <Card key={index} className="bg-[#5E6470]">
-              <CardContent className="">
-                <div className="text-center flex flex-col justify-center">
-                  <p className="text-2xl font-bold text-[#E55351]">
-                    {formattedValue}
-                  </p>
-                  <p className="text-base text-muted-foreground mt-1">
-                    {formattedLabel}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+            return (
+              <div key={index} className="flex justify-between items-center">
+                <span className="text-white font-medium text-lg">
+                  {formattedLabel}
+                </span>
+                <span className="text-white font-bold text-xl">
+                  {formattedValue}
+                </span>
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
     </div>
   );
 };
