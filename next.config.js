@@ -42,6 +42,12 @@ const nextConfig = {
         port: "",
         pathname: "/album/*/image",
       },
+      {
+        protocol: "https",
+        hostname: "is1-ssl.mzstatic.com",
+        port: "",
+        pathname: "/image/**",
+      },
     ],
   },
 };
