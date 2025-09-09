@@ -3,6 +3,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   formatCurrencyCompact,
   formatNumberCompact,
 } from "@/helpers/formatters";
@@ -76,7 +82,7 @@ const TrackImage: React.FC<{
   }
 
   return (
-    <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+    <div className="w-6 h-6 rounded-full overflow-hidden flex-shrink-0">
       <Image
         src={track.image}
         alt={track.title}
@@ -147,6 +153,54 @@ const PlatformBadge: React.FC<{
   return badgeContent;
 };
 
+// Component for Spotify icon with fallback
+const SpotifyIcon: React.FC = () => {
+  const [iconError, setIconError] = React.useState(false);
+
+  if (iconError) {
+    return (
+      <div className="w-6 h-6 bg-[#1DB954] rounded flex items-center justify-center">
+        <Play className="h-3 w-3 text-white" />
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src="https://blacklion-public-s3.s3.us-east-2.amazonaws.com/spotify.png"
+      alt="Spotify icon"
+      width={24}
+      height={24}
+      className="w-6 h-6 object-contain"
+      onError={() => setIconError(true)}
+    />
+  );
+};
+
+// Component for YouTube icon with fallback
+const YouTubeIcon: React.FC = () => {
+  const [iconError, setIconError] = React.useState(false);
+
+  if (iconError) {
+    return (
+      <div className="w-6 h-6 bg-[#FF0000] rounded flex items-center justify-center">
+        <Eye className="h-3 w-3 text-white" />
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src="https://blacklion-public-s3.s3.us-east-2.amazonaws.com/youtube.png"
+      alt="YouTube icon"
+      width={24}
+      height={24}
+      className="w-6 h-6 object-contain"
+      onError={() => setIconError(true)}
+    />
+  );
+};
+
 const ArtistComparisonReportDisplay: React.FC<
   ArtistComparisonReportDisplayProps
 > = ({ data }) => {
@@ -170,10 +224,10 @@ const ArtistComparisonReportDisplay: React.FC<
         <h3 className="text-lg font-semibold text-foreground mb-4">
           Total Earnings Comparison
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {artists.map((artist) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+          {artists.map((artist, index) => (
             <Card
-              key={artist.id}
+              key={`earnings-${artist.id}-${index}`}
               className="bg-[#FF7B79C7] border-none rounded-2xl p-4"
             >
               <CardContent className="p-0 space-y-3">
@@ -217,11 +271,11 @@ const ArtistComparisonReportDisplay: React.FC<
         <h3 className="text-lg font-semibold text-foreground">
           Platform Analysis
         </h3>
-        {artists.map((artist) => (
-          <div key={`platform-${artist.id}`} className="space-y-4">
+        {artists.map((artist, index) => (
+          <div key={`platform-${artist.id}-${index}`} className="space-y-4 ">
             {/* Artist Strip */}
-            <div className="bg-[#2C3E50] rounded-lg p-4 flex items-center gap-3">
-              <Avatar className="h-10 w-10">
+            <div className="bg-[#222C41] rounded-lg p-2 flex items-center gap-3 border-border border-[1px]">
+              <Avatar className="h-7 w-7">
                 <AvatarImage
                   src={artist.images.thumb}
                   alt={artist.name}
@@ -231,33 +285,33 @@ const ArtistComparisonReportDisplay: React.FC<
                   {artist.name.charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-white font-semibold text-lg truncate">
+              <span className="text-white text-base truncate">
                 {artist.name}
               </span>
             </div>
 
             {/* Platform Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Spotify Card */}
-              <Card className="bg-[#4A5568] border-none rounded-lg">
-                <CardHeader className="pb-3">
+              <Card className="bg-[#5E6470] border-none rounded-lg">
+                <CardHeader className="">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-[#1DB954] rounded flex items-center justify-center">
-                      <Play className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-white font-medium">Spotify</span>
+                    <SpotifyIcon />
+                    <span className="text-white font-medium text-base">
+                      Spotify
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-white/80 text-sm">Plays</span>
-                    <span className="text-white font-semibold">
+                    <span className="text-white text-base">Plays</span>
+                    <span className="text-white font-semibold text-2xl">
                       {formatNumberCompact(artist.spotify.streams.lifetime)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-white/80 text-sm">Earnings</span>
-                    <span className="text-white font-semibold">
+                    <span className="text-white text-sm">Earnings</span>
+                    <span className="text-white font-semibold text-2xl">
                       {formatCurrencyCompact(artist.spotify.earnings.lifetime)}
                     </span>
                   </div>
@@ -265,25 +319,25 @@ const ArtistComparisonReportDisplay: React.FC<
               </Card>
 
               {/* YouTube Card */}
-              <Card className="bg-[#4A5568] border-none rounded-lg">
-                <CardHeader className="pb-3">
+              <Card className="bg-[#5E6470] border-none rounded-lg">
+                <CardHeader className="">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-[#FF0000] rounded flex items-center justify-center">
-                      <Eye className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-white font-medium">YouTube</span>
+                    <YouTubeIcon />
+                    <span className="text-white font-medium text-base">
+                      YouTube
+                    </span>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-white/80 text-sm">Views</span>
-                    <span className="text-white font-semibold">
+                    <span className="text-white text-base">Views</span>
+                    <span className="text-white font-semibold text-2xl">
                       {formatNumberCompact(artist.youtube.views.lifetime)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-white/80 text-sm">Earnings</span>
-                    <span className="text-white font-semibold">
+                    <span className="text-white text-base">Earnings</span>
+                    <span className="text-white font-semibold text-2xl">
                       {formatCurrencyCompact(artist.youtube.earnings.lifetime)}
                     </span>
                   </div>
@@ -299,15 +353,15 @@ const ArtistComparisonReportDisplay: React.FC<
         <h3 className="text-lg font-semibold text-foreground">
           Top Performance Tracks
         </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {artists.map((artist) => (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-6">
+          {artists.map((artist, index) => (
             <Card
-              key={`tracks-${artist.id}`}
-              className="bg-[#2C3E50] border-none rounded-lg"
+              key={`tracks-${artist.id}-${index}`}
+              className="bg-[#222C41] border-none rounded-lg"
             >
-              <CardHeader className="pb-4">
+              <CardHeader className="">
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage
                       src={artist.images.thumb}
                       alt={artist.name}
@@ -317,24 +371,33 @@ const ArtistComparisonReportDisplay: React.FC<
                       {artist.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-white font-semibold text-lg">
+                  <span className="text-white font-semibold text-xl">
                     {artist.name} Top Tracks
                   </span>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {artist.top_tracks.slice(0, 5).map((track) => (
+              <CardContent className="space-y-2">
+                {artist.top_tracks.slice(0, 5).map((track, trackIndex) => (
                   <div
-                    key={track.id}
+                    key={`${artist.id}-track-${track.id}-${trackIndex}`}
                     className="flex items-center justify-between py-2"
                   >
                     <div className="flex items-center gap-3">
                       <TrackImage track={track} />
-                      <span className="text-white font-medium text-sm truncate max-w-[200px]">
-                        {track.title}
-                      </span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="text-white font-[400] text-base truncate max-w-[200px] cursor-help capitalize">
+                              {track.title}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-xs capitalize">{track.title}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
-                    <span className="text-white font-semibold">
+                    <span className="text-white font-bold text-base">
                       {formatCurrencyCompact(track.earnings.l30d)}
                     </span>
                   </div>
