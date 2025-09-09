@@ -388,12 +388,12 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
                   src={displayData}
                   controls
                   className="max-w-full h-auto rounded-lg border"
-                  onError={(e) => {
-                    console.error(
-                      "Failed to load video from URL:",
-                      displayData
-                    );
-                  }}
+                  // onError={(e) => {
+                  //   console.error(
+                  //     "Failed to load video from URL:",
+                  //     displayData
+                  //   );
+                  // }}
                 >
                   Your browser does not support the video tag.
                 </video>

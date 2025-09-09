@@ -110,7 +110,7 @@ export function useRAGSources(sessionId?: string) {
       // Update the sources cache by removing the deleted source
       queryClient.setQueryData(['rag-sources', sessionId], (oldData: string[] | undefined) => {
         if (!oldData) return [];
-        return oldData.filter(source => source !== variables.document_id);
+        return oldData?.documents.filter(source => source !== variables.document_id);
       });
     },
     onError: (error) => {
