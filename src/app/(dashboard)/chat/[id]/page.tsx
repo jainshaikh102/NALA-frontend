@@ -356,11 +356,8 @@ const {
   // Generation hooks with callbacks to create bot messages
   const {
     generateImage,
-    showImage,
     isGeneratingImage,
-    isShowingImage,
     generatedImageData,
-    showImageData,
   } = useImageGeneration(
     // Success callback
     (imageData) => {
@@ -370,13 +367,13 @@ const {
         const botMessage: ChatMessage = {
           id: Date.now() + 1,
           type: "bot",
-          content: imageData.message || "Image generated successfully!",
+          content: imageData?.message || "Image generated successfully!",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          displayData: imageData.base64_image,
-          dataType: "image_base64",
+          displayData: imageData?.image_url,
+          dataType: "image_url",
         };
         return [...withoutThinking, botMessage];
       });
@@ -1177,7 +1174,7 @@ const {
     const dataType = message.dataType;
 
     switch (dataType) {
-      case "image_base64":
+      case "image_url":
         return [
           {
             label: "Download Image",

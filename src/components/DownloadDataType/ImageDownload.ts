@@ -2,11 +2,11 @@ import { toast } from "sonner";
 
 // Download Image from Base64
 export const downloadImageFromBase64 = (
-  base64Data: string,
+  imageData: string,
   messageIndex?: number
 ) => {
   try {
-    if (!base64Data) {
+    if (!imageData) {
       toast.error("No image data to download");
       return;
     }
@@ -15,10 +15,11 @@ export const downloadImageFromBase64 = (
 
     // Create a link element and trigger download
     const link = document.createElement("a");
-    link.href = `data:image/png;base64,${base64Data}`;
+    link.href = imageData;
     link.download = `nala-generated-image-${messageIndex || "single"}-${
       new Date().toISOString().split("T")[0]
     }.png`;
+    link.target = "_blank";
 
     // Append to body, click, and remove
     document.body.appendChild(link);
