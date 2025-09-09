@@ -73,7 +73,7 @@ export function useImageGeneration(
     },
     onSuccess: (data) => {
       // Since we now throw errors for success: false, we only reach here on actual success
-      if (data.base64_image) {
+      if (data.image_url) {
         // toast.success("Image generated successfully!");
         // Call the callback to add bot message
         if (onImageGenerated) {
@@ -92,38 +92,11 @@ export function useImageGeneration(
     },
   });
 
-  const showImageMutation = useMutation<any, Error, ShowImageRequest>({
-    mutationFn: async (data: ShowImageRequest) => {
-      const response = await fetch("/api/show-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to show image");
-      }
-
-      return response.json();
-    },
-    onError: (error) => {
-      console.error("Failed to show image:", error);
-      toast.error(error.message || "Failed to display image");
-    },
-  });
-
   return {
     generateImage: generateImageMutation.mutate,
-    showImage: showImageMutation.mutate,
     isGeneratingImage: generateImageMutation.isPending,
-    isShowingImage: showImageMutation.isPending,
     imageGenerationError: generateImageMutation.error,
-    showImageError: showImageMutation.error,
     generatedImageData: generateImageMutation.data,
-    showImageData: showImageMutation.data,
   };
 }
 

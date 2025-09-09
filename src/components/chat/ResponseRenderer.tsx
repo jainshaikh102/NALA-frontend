@@ -137,16 +137,16 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
           return <TextDisplay content={data as string} />;
         case "error":
           return <ErrorDisplay content={data as string} />;
-        case "image_base64":
+        case "image_url":
           return (
             <div className="w-full">
               {data && typeof data === "string" ? (
                 <img
-                  src={`data:image/png;base64,${data}`}
+                  src={data}
                   alt="Generated content"
                   className="max-w-full h-auto rounded-lg border"
                   onError={(e) => {
-                    console.error("Failed to load base64 image");
+                    console.error("Failed to load image");
                     e.currentTarget.style.display = "none";
                   }}
                 />
@@ -352,18 +352,18 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
       case "error":
         return <ErrorDisplay content={answerStr} />;
 
-      case "image_base64":
+      case "image_url":
         return (
           <div className="space-y-4">
             {answerStr ? <TextDisplay content={answerStr} /> : null}
             {displayData && typeof displayData === "string" ? (
               <div className="w-full">
                 <img
-                  src={`data:image/png;base64,${displayData}`}
+                  src={displayData}
                   alt="Generated content"
                   className="max-w-full h-auto rounded-lg border"
                   onError={(e) => {
-                    console.error("Failed to load base64 image");
+                    console.error("Failed to load image");
                     e.currentTarget.style.display = "none";
                   }}
                 />
@@ -388,12 +388,12 @@ export const ResponseRenderer: React.FC<ResponseRendererProps> = ({
                   src={displayData}
                   controls
                   className="max-w-full h-auto rounded-lg border"
-                  onError={(e) => {
-                    console.error(
-                      "Failed to load video from URL:",
-                      displayData
-                    );
-                  }}
+                  // onError={(e) => {
+                  //   console.error(
+                  //     "Failed to load video from URL:",
+                  //     displayData
+                  //   );
+                  // }}
                 >
                   Your browser does not support the video tag.
                 </video>

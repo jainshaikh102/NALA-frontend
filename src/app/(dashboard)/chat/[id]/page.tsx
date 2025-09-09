@@ -356,11 +356,8 @@ const {
   // Generation hooks with callbacks to create bot messages
   const {
     generateImage,
-    showImage,
     isGeneratingImage,
-    isShowingImage,
     generatedImageData,
-    showImageData,
   } = useImageGeneration(
     // Success callback
     (imageData) => {
@@ -370,13 +367,13 @@ const {
         const botMessage: ChatMessage = {
           id: Date.now() + 1,
           type: "bot",
-          content: imageData.message || "Image generated successfully!",
+          content: imageData?.message || "Image generated successfully!",
           timestamp: new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           }),
-          displayData: imageData.base64_image,
-          dataType: "image_base64",
+          displayData: imageData?.image_url,
+          dataType: "image_url",
         };
         return [...withoutThinking, botMessage];
       });
@@ -1177,7 +1174,7 @@ const {
     const dataType = message.dataType;
 
     switch (dataType) {
-      case "image_base64":
+      case "image_url":
         return [
           {
             label: "Download Image",
@@ -1350,17 +1347,51 @@ const handleDropboxConnect = async (files: any[]) => {
                           <div className="w-12 h-12 rounded-full bg-[#FFFFFF]/20 hover:bg-[#ffffff]/10 flex items-center justify-center">
                             <Upload className="h-6 w-6 text-primary" />
                           </div>
-                          <div>
-                            <h3 className="text-white text-lg font-medium mb-2">
-                              DRAG AND DROP
-                            </h3>
-                            <p className="text-gray-400 mb-4">Or</p>
+                          <div  onDragOver={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onDragEnter={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onDragLeave={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const files = Array.from(e.dataTransfer.files);
+                                if (files.length > 0) {
+                                  handleFileUpload(files[0]);
+                                }
+                              }}>
+                                <h3 className="text-white text-lg font-medium mb-2">
+                                  DRAG AND DROP
+                                </h3>
+                                <p className="text-gray-400 mb-4">Or</p>
+                              <input
+                              type="file"
+                              id="file-upload"
+                              className="hidden"
+                              accept=".pdf,.txt,.md,.mp3,.wav,.mp4,.avi,.mov"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  handleFileUpload(file);
+                                }
+                                e.target.value = "";
+                              }}
+                          />
                             <Button
                               className="bg-[#6B7280] hover:bg-[#FFFFFF]/5 text-white px-8 py-2 rounded-full"
-                              onClick={() => setIsFileUploadDialogOpen(true)}
+                              // onClick={() => setIsFileUploadDialogOpen(true)}
+                            onClick={() => document.getElementById("file-upload")?.click()}
                             >
                               Upload File
                             </Button>
+                            
                           </div>
                           <p className="text-gray-400 text-sm">
                             Supported file types: PDF, txt, Markdown, Audio,
@@ -3003,88 +3034,6 @@ const handleDropboxConnect = async (files: any[]) => {
               ) : (
                 "Remove Artist"
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* File Upload Dialog */}
-
-      <Dialog
-        open={isFileUploadDialogOpen}
-        onOpenChange={setIsFileUploadDialogOpen}
-      >
-        <DialogContent className="w-full max-w-md bg-background border border-border text-foreground">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-foreground">
-              Upload File
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              Upload PDF, TXT, Markdown, Audio, or Video files (Max: 100MB)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Drag & Drop Area */}
-            <div
-              className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary/50 transition-colors bg-muted/30"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDragEnter={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDragLeave={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onDrop={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const files = Array.from(e.dataTransfer.files);
-                if (files.length > 0) {
-                  handleFileUpload(files[0]);
-                }
-              }}
-            >
-              <div className="space-y-2">
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                <p className="text-sm text-foreground">
-                  Drag & drop files here, or click to browse
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Supported: PDF, TXT, MD, MP3, WAV, MP4, AVI, MOV
-                </p>
-              </div>
-            </div>
-
-            {/* File Input */}
-            <input
-              type="file"
-              id="file-upload"
-              className="hidden"
-              accept=".pdf,.txt,.md,.mp3,.wav,.mp4,.avi,.mov"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  handleFileUpload(file);
-                }
-                e.target.value = "";
-              }}
-            />
-            <label
-              htmlFor="file-upload"
-              className="block w-full p-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-center cursor-pointer transition-colors"
-            >
-              Choose File
-            </label>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsFileUploadDialogOpen(false)}
-            >
-              Cancel
             </Button>
           </DialogFooter>
         </DialogContent>
