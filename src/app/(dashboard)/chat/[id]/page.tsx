@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -84,6 +84,7 @@ import { useDropboxUpload } from "@/hooks/use-dropbox-upload";
 import { useDropbox } from "@/hooks/use-dropbox";
 import { DropboxConnector } from "@/components/sources/dropbox-connector";
 
+
 interface ChatMessage {
   id: number;
   type: "user" | "bot";
@@ -100,7 +101,6 @@ const ChatPage = () => {
   const params = useParams();
   const router = useRouter();
   const chatId = params.id as string;
-
   const [inputText, setInputText] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [isLoadingChats, setIsLoadingChats] = useState(true); // Start with loading state
@@ -179,6 +179,8 @@ const ChatPage = () => {
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
   const [linkInput, setLinkInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
+  const [pendingNewSessionId, setPendingNewSessionId] = useState("");
+  const isCreatingNewSession = useRef(false);
   const { user } = useAuthStore();
 
   // Shared Google Drive hook instance
@@ -536,7 +538,7 @@ const {
         question: question,
         username: user?.username,
         model_name: "gemini-2.0-flash-001",
-        ...(sessionIdToUse && { chat_session_id: sessionIdToUse }),
+        chat_session_id: sessionIdToUse,
       };
 
       const response = await fetch("/api/chat/execute-query", {
@@ -692,16 +694,10 @@ const {
 
   // Auto-scroll when messages change and hide loading when both APIs are complete
   useEffect(() => {
-    if (messages.length > 0) {
-      // Wait for messages to render in DOM before scrolling
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
-    } else {
-      // Just scroll if no messages
+    if (messages?.length > 0) {
       scrollToBottom();
     }
-  }, [messages]);
+  }, [messages?.length]);
 
   // Hide loading only when messages are actually rendered in the UI
   useEffect(() => {
@@ -739,72 +735,38 @@ const {
 
   // Load chat session based on URL parameter
   useEffect(() => {
-    // Don't do anything if sessions are still loading
-    if (isLoadingSessions) return;
-
-    if (chatId === "new") {
-      // New chat - don't create session yet, just show empty chat interface
-      setIsLoadingChats(false);
-      setIsSwitchingChat(false);
-      setCurrentSessionId(null);
-      setMessages([]);
-      setInvalidChatId(false);
-    } else if (chatSessions && chatSessions.length > 0) {
-      // If we have a chatId from URL, try to load that specific chat
-      if (chatId && chatId !== "undefined") {
-        const targetSession = chatSessions.find(
-          (session) => session.session_id === chatId
-        );
-
-        if (targetSession && currentSessionId !== chatId) {
-          // Valid chat ID from URL - load this specific chat
-          setInvalidChatId(false);
-          setIsLoadingChats(true);
-          setIsSwitchingChat(true);
-          setMessages([]);
-          setCurrentSessionId(chatId);
-          // Auto-switch to Sources tab to show sources/rosters for this chat
-          setDesktopActiveTab("sources");
-          // On mobile, switch to chat tab so users can immediately start chatting
-          setMobileActiveTab("chat");
-        } else if (!targetSession) {
-          // Invalid chat ID from URL - show error and redirect to most recent chat
-          setInvalidChatId(true);
-          const sortedSessions = [...chatSessions].sort(
-            (a, b) =>
-              new Date(b.created_at).getTime() -
-              new Date(a.created_at).getTime()
-          );
-          const mostRecentSession = sortedSessions[0];
-          if (mostRecentSession) {
-            // Show error briefly before redirecting
-            setTimeout(() => {
-              setInvalidChatId(false);
-              router.replace(`/chat/${mostRecentSession.session_id}`);
-            }, 2000);
-          }
-        }
-      } else if (!currentSessionId) {
-        // No chat ID in URL - redirect to most recent chat
-        const sortedSessions = [...chatSessions].sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-        const mostRecentSession = sortedSessions[0];
-        if (mostRecentSession) {
-          router.replace(`/chat/${mostRecentSession.session_id}`);
-        }
-      }
-    } else if (chatSessions && chatSessions.length === 0 && chatId !== "new") {
-      // No chat sessions available and not a new chat, redirect to new
-      router.replace("/chat/new");
-    } else if (chatId !== "new") {
-      // Still loading or other edge case, hide loading
-      setIsLoadingChats(false);
-      setIsSwitchingChat(false);
-    }
-  }, [chatSessions, currentSessionId, isLoadingSessions, chatId, router]);
-
+  if (isLoadingSessions) return;
+  
+  // Handle "new" route
+  if (chatId === "new") {
+    const newChatId = crypto.randomUUID();
+    router.replace(`/chat/${newChatId}`);
+    setIsLoadingChats(false);
+    setIsSwitchingChat(false);
+    return;
+  }
+  
+  // Check if chatId is a valid UUID
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chatId);
+  
+  if (!isValidUUID) return;
+  
+  // Find existing session
+  const existingSession = chatSessions?.find(session => session.session_id === chatId);
+  
+  if (existingSession && currentSessionId !== chatId) {
+    // Load existing session
+    setCurrentSessionId(chatId);
+    setIsLoadingChats(true);
+    setIsSwitchingChat(true);
+  } else if (!existingSession) {
+    // New UUID - reset to empty state
+    setCurrentSessionId(chatId);
+    setMessages([]);
+    setIsLoadingChats(false);
+    setIsSwitchingChat(false);
+  }
+}, [chatId, isLoadingSessions, chatSessions, currentSessionId]);
   // Confirm artist removal
   const handleConfirmRemoveArtist = () => {
     if (confirmRemoveDialog.artistName && user?.username) {
@@ -853,16 +815,39 @@ const {
     }
   };
 
-  // Chat session management functions
-  const handleCreateNewSession = () => {
-    // Navigate to new chat interface without creating session
-    router.push("/chat/new");
-  };
+const handleCreateNewSession = useCallback(() => {
+  // Prevent multiple simultaneous calls
+  if (isCreatingNewSession.current) return;
+  
+  isCreatingNewSession.current = true;
+  
+  try {
+    setInvalidChatId(false);
+    
+    // Generate new UUID on frontend
+    const newChatId = crypto.randomUUID();
+    
+    // Clear current state before navigation
+    setCurrentSessionId(newChatId);
+    setMessages([]);
+    setIsLoadingChats(false);
+    setIsSwitchingChat(false);
+    // Navigate to new chat
+    router.push(`/chat/${newChatId}`);
+    
+    // Reset flag after a delay
+    setTimeout(() => {
+      isCreatingNewSession.current = false;
+    }, 1000);
+    
+  } catch (error) {
+    console.error("Error creating new session:", error);
+    isCreatingNewSession.current = false;
+  }
+}, [router]);
 
   const handleLoadChatSession = (sessionId: string) => {
-    // Only load if it's a different session (prevent deselection)
     if (currentSessionId !== sessionId) {
-      // Navigate to the specific chat URL
       router.push(`/chat/${sessionId}`);
     }
   };
@@ -878,8 +863,6 @@ const {
   const handleConfirmDeleteSession = () => {
     if (confirmDeleteSessionDialog.sessionId) {
       endSession({ chat_session_id: confirmDeleteSessionDialog.sessionId });
-
-      // If we're deleting the current session, clear it
       if (currentSessionId === confirmDeleteSessionDialog.sessionId) {
         setCurrentSessionId(null);
         setMessages([]);
@@ -1245,14 +1228,14 @@ const handleDropboxConnect = async (files: any[]) => {
   return (
     <div className="h-screen bg-[#222C41] flex flex-col lg:flex-row gap-4 p-4 sm:p-4 lg:p-4 overflow-hidden scrollbar-hide rounded-2xl border border-[#FFFFFF3B]">
       {/* Invalid Chat ID Error */}
-      {invalidChatId && (
+      {/* {invalidChatId && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
             <Info className="h-4 w-4" />
             <span>Chat not found. Redirecting to most recent chat...</span>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Desktop: Left Panel - Sources, Rosters, Queries */}
       <div className="hidden lg:block w-80 transition-all duration-300 ease-in-out bg-background rounded-lg overflow-auto scrollbar-hide flex-shrink-0">
@@ -1648,10 +1631,14 @@ const handleDropboxConnect = async (files: any[]) => {
                     variant="outline"
                     size="icon"
                     className="h-6 w-6 rounded-full bg-transparent border-solid border-[1px] border-[#ffffff]/50"
-                    onClick={handleCreateNewSession}
-                    disabled={isStartingSession}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCreateNewSession();
+                    }}
+                    disabled={isStartingSession || isCreatingNewSession.current}
                   >
-                    {isStartingSession ? (
+                    {isStartingSession || isCreatingNewSession.current? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
                       <Plus className="h-4 w-4" />
@@ -1783,7 +1770,7 @@ const handleDropboxConnect = async (files: any[]) => {
               </div>
 
               <div className="space-y-2">
-                {isLoadingSessions ? (
+                {isLoadingSessions && chatSessions.length === 0 ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     <span className="text-sm text-muted-foreground">
@@ -2088,14 +2075,12 @@ const handleDropboxConnect = async (files: any[]) => {
               className="flex-1 overflow-y-auto overflow-x-hidden p-4 relative min-h-0"
             >
               {/* Loading overlay for chat loading */}
-              {(isLoadingChats || isLoadingSessions) && (
+              {(isLoadingChats && isLoadingSessions) && (
                 <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
                   <div className="flex flex-col items-center space-y-4">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="text-sm text-muted-foreground">
-                      {isLoadingSessions
-                        ? "Loading chats..."
-                        : "Loading chat..."}
+                      "Processing..."
                     </p>
                   </div>
                 </div>
@@ -2418,12 +2403,12 @@ const handleDropboxConnect = async (files: any[]) => {
           className="flex-1 overflow-y-auto p-4 space-y-4 relative scrollbar-thin scroll-smooth"
         >
           {/* Loading overlay for chat loading */}
-          {(isLoadingChats || isLoadingSessions) && (
+          {(isLoadingChats && isLoadingSessions) && (
             <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10">
               <div className="flex flex-col items-center space-y-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-muted-foreground">
-                  {isLoadingSessions ? "Loading chats..." : "Loading chat..."}
+               Processing...
                 </p>
               </div>
             </div>
