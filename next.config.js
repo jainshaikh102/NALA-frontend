@@ -36,6 +36,7 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+
       {
         protocol: "https",
         hostname: "blacklion-public-s3.s3.us-east-2.amazonaws.com",
@@ -48,13 +49,12 @@ const nextConfig = {
         port: "",
         pathname: "/album/*/image",
       },
-      {
+   {
         protocol: "https",
         hostname: "is1-ssl.mzstatic.com",
         port: "",
         pathname: "/image/**",
-      },
-    ],
+      }    ],
   },
 };
 

@@ -11,53 +11,62 @@ const ChatRedirectPage = () => {
   const hasCreatedSession = useRef(false);
 
   useEffect(() => {
-    const createNewChatSession = async () => {
-      // Prevent multiple session creation
-      if (!user?.username || isCreatingSession || hasCreatedSession.current) {
-        return;
-      }
+     if (!user?.username) {
+      return;
+    }
 
-      // Mark that we're starting session creation
-      hasCreatedSession.current = true;
-      setIsCreatingSession(true);
-
-      try {
-        // Create a new chat session immediately
-        const sessionResponse = await fetch("/api/chat/start-session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username: user.username }),
-        });
-
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          const newSessionId = sessionData.chat_session_id;
-
-          // Navigate directly to the new chat session
-          router.replace(`/chat/${newSessionId}`);
-        } else {
-          // Fallback to /new if session creation fails
-          console.error("Failed to create chat session");
-          router.replace("/chat/new");
-          // Reset flag on error so user can try again
-          hasCreatedSession.current = false;
-        }
-      } catch (error) {
-        console.error("Error creating chat session:", error);
-        // Fallback to /new if there's an error
-        router.replace("/chat/new");
-        // Reset flag on error so user can try again
-        hasCreatedSession.current = false;
-      } finally {
-        setIsCreatingSession(false);
-      }
-    };
-
-    createNewChatSession();
+    // Generate a new UUID on the frontend
+    const newChatId = crypto.randomUUID();
+router.replace(`/chat/${newChatId}`);
+    // createNewChatSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, user?.username]); // Intentionally excluding isCreatingSession to prevent multiple calls
+
+
+  // const createNewChatSession = async () => {
+  //     // Prevent multiple session creation
+  //     if (!user?.username || isCreatingSession || hasCreatedSession.current) {
+  //       return;
+  //     }
+
+  //     // Mark that we're starting session creation
+  //     hasCreatedSession.current = true;
+  //     setIsCreatingSession(true);
+
+  //     try {
+  //       // Create a new chat session immediately
+  //       const sessionResponse = await fetch("/api/chat/start-session", {
+  //         method: "POST",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({ username: user.username }),
+  //       });
+
+  //       if (sessionResponse.ok) {
+  //         const sessionData = await sessionResponse.json();
+  //         const newSessionId = sessionData.chat_session_id;
+
+  //         // Navigate directly to the new chat session
+  //         router.replace(`/chat/${newSessionId}`);
+  //       } else {
+  //         // Fallback to /new if session creation fails
+  //         console.error("Failed to create chat session");
+  //         router.replace("/chat/new");
+  //         // Reset flag on error so user can try again
+  //         hasCreatedSession.current = false;
+  //       }
+  //     } catch (error) {
+  //       console.error("Error creating chat session:", error);
+  //       // Fallback to /new if there's an error
+  //       router.replace("/chat/new");
+  //       // Reset flag on error so user can try again
+  //       hasCreatedSession.current = false;
+  //     } finally {
+  //       setIsCreatingSession(false);
+  //     }
+  //   };
+
 
   // Show loading state while creating session
   return (
